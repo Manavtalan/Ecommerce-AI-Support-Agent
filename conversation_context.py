@@ -1,3 +1,4 @@
+
 # conversation_context.py
 """
 Conversation Context Manager
@@ -6,6 +7,7 @@ Manages conversation state and memory within a single customer session.
 
 from datetime import datetime
 from typing import Optional
+from conversation_state import ActiveTopic, NO_TOPIC
 
 
 class ConversationContext:
