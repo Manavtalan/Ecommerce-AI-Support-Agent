@@ -1,3 +1,10 @@
+# orders_db.py
+"""
+Order Database (Mock)
+In production, this would connect to actual database/API.
+"""
+
+# Mock order database
 ORDERS = {
     "12345": {
         "status": "Shipped",
