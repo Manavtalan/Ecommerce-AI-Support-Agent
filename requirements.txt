@@ -1,2 +1,5 @@
-openai
-python-dotenv
+# requirements.txt
+# Python dependencies for Ecommerce AI Support Agent
+
+openai>=1.0.0
+python-dotenv>=1.0.0
