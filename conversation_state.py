@@ -10,9 +10,6 @@ from datetime import datetime
 from enum import Enum
 
 
-print("conversation_state loaded")  # SENTINEL — remove later
-
-
 class TopicType(Enum):
     """What kind of thing we're discussing"""
     NONE = "none"
@@ -34,13 +31,13 @@ class ActiveTopic:
     Immutable representation of conversational focus.
     This is THE answer to: "What are we currently discussing?"
     """
-
+    
     topic_type: TopicType
-    entity_id: Optional[str]
+    entity_id: Optional[str]      # e.g., order_id "12345"
     confidence: TopicConfidence
-    reason: str
+    reason: str                   # Human-readable explanation
     established_at: datetime
-
+    
     def __post_init__(self):
         """Enforce invariants at construction"""
         if self.topic_type == TopicType.NONE:
@@ -48,20 +45,23 @@ class ActiveTopic:
                 raise ValueError("NONE topic cannot have entity_id")
             if self.confidence != TopicConfidence.NONE:
                 raise ValueError("NONE topic must have NONE confidence")
-
+        
         if self.topic_type != TopicType.NONE:
             if self.confidence == TopicConfidence.NONE:
                 raise ValueError("Non-NONE topic must have confidence")
-
+    
     def is_active(self) -> bool:
+        """Is there an active topic?"""
         return self.topic_type != TopicType.NONE
-
+    
     def is_order_topic(self) -> bool:
+        """Are we discussing a specific order?"""
         return self.topic_type == TopicType.ORDER and self.entity_id is not None
-
+    
     def is_explicit(self) -> bool:
+        """Was this explicitly stated by user?"""
         return self.confidence == TopicConfidence.EXPLICIT
-
+    
     def __str__(self) -> str:
         if not self.is_active():
             return "ActiveTopic(NONE)"
@@ -71,7 +71,7 @@ class ActiveTopic:
         )
 
 
-# Sentinel: no active topic
+# Sentinel: "no active topic"
 NO_TOPIC = ActiveTopic(
     topic_type=TopicType.NONE,
     entity_id=None,
@@ -79,4 +79,3 @@ NO_TOPIC = ActiveTopic(
     reason="No active topic",
     established_at=datetime.now()
 )
-
