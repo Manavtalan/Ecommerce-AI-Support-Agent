@@ -10,6 +10,7 @@ from prompts import SYSTEM_PROMPT
 from tools import get_order_status
 from intent import detect_intent
 from conversation_context import ConversationContext
+from conversation_state import ActiveTopic
 from context_aware_intent import ContextAwareIntentResolver
 import re
 

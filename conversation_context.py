@@ -18,6 +18,10 @@ class ConversationContext:
     
     def __init__(self):
         """Initialize empty context for new conversation"""
+        # NEW: Semantic conversational state
+        self.active_topic = NO_TOPIC
+
+        # OLD: Keep existing state (temporary)
         self.reset()
     
     def reset(self):
@@ -125,16 +129,44 @@ class ConversationContext:
         
         return False
     
+# === NEW: Semantic Topic Management ===
+
+    def set_active_topic(self, topic: ActiveTopic) -> None:
+        """
+        Set the current conversational topic.
+        This is the ONLY way to change focus.
+        """
+        if not isinstance(topic, ActiveTopic):
+            raise TypeError("Must provide ActiveTopic instance")
+        self.active_topic = topic
+
+    def get_active_topic(self) -> ActiveTopic:
+        """Get current topic (read-only)"""
+        return self.active_topic
+
+    def has_active_topic(self) -> bool:
+        """Is there an active conversational topic?"""
+        return self.active_topic.is_active()
+
+    def clear_topic(self) -> None:
+        """Clear active topic"""
+        self.active_topic = NO_TOPIC
+
+    def get_order_id_semantic(self):
+        """
+        Get order_id from semantic topic.
+        Returns None if not discussing an order.
+        """
+        if self.active_topic.is_order_topic():
+            return self.active_topic.entity_id
+        return None
+
     def __str__(self) -> str:
-        """
-        Human-readable context for debugging.
-        Shows current conversation state at a glance.
-        """
+        """Human-readable context for debugging"""
         return (
-            f"Context("
-            f"turns={self.conversation_turns}, "
-            f"intent={self.last_intent}, "
-            f"order={self.last_order_id}, "
-            f"pending={self.pending_intent}"
-            f")"
-        )
+        f"ConversationContext(\n"
+        f"  active_topic={self.active_topic},\n"
+        f"  turns={self.conversation_turns},\n"
+        f"  [OLD] last_order_id={self.last_order_id}, last_intent={self.last_intent}\n"
+        f")"
+    )
