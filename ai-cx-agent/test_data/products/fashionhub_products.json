@@ -1,0 +1,556 @@
+{
+  "FH-DRESS-001": {
+    "product_id": "FH-DRESS-001",
+    "brand_id": "brand_fashionhub_001",
+    "name": "Summer Floral Dress",
+    "category": "Dresses",
+    "subcategory": "Casual Dresses",
+    "price": 1499,
+    "original_price": 1999,
+    "discount_percentage": 25,
+    "in_stock": true,
+    "stock_quantity": 45,
+    "variants": {
+      "sizes": ["XS", "S", "M", "L", "XL", "XXL"],
+      "colors": ["Blue Floral", "Pink Floral", "Yellow Floral", "White Floral"]
+    },
+    "description": "Light and breezy summer dress with beautiful floral print. Perfect for casual outings and day events. Made from breathable cotton blend fabric.",
+    "specifications": {
+      "material": "65% Cotton, 35% Polyester",
+      "fit": "Regular Fit",
+      "length": "Knee Length",
+      "sleeve": "Sleeveless",
+      "pattern": "Floral Print",
+      "occasion": "Casual, Day Wear",
+      "care_instructions": "Machine wash cold, hang dry, do not bleach"
+    },
+    "features": [
+      "Breathable fabric",
+      "Floral print",
+      "Side pockets",
+      "Adjustable shoulder straps",
+      "Back zip closure"
+    ],
+    "size_guide_available": true,
+    "sustainable": false,
+    "tags": ["summer", "dress", "floral", "casual", "cotton"]
+  },
+
+  "FH-JEANS-001": {
+    "product_id": "FH-JEANS-001",
+    "brand_id": "brand_fashionhub_001",
+    "name": "Classic Blue Jeans",
+    "category": "Denim",
+    "subcategory": "Jeans",
+    "price": 1299,
+    "original_price": 1799,
+    "discount_percentage": 28,
+    "in_stock": true,
+    "stock_quantity": 120,
+    "variants": {
+      "sizes": ["28", "30", "32", "34", "36", "38", "40"],
+      "colors": ["Dark Blue", "Light Blue", "Black", "Grey"]
+    },
+    "description": "Premium quality denim jeans with perfect fit and comfort. Versatile design suitable for both casual and semi-formal occasions.",
+    "specifications": {
+      "material": "98% Cotton, 2% Elastane",
+      "fit": "Slim Fit",
+      "rise": "Mid Rise",
+      "closure": "Zipper with Button",
+      "pockets": "5 pockets",
+      "care_instructions": "Machine wash cold inside out, tumble dry low"
+    },
+    "features": [
+      "Stretchable denim",
+      "Fade-resistant",
+      "Reinforced stitching",
+      "Classic 5-pocket design",
+      "Belt loops"
+    ],
+    "size_guide_available": true,
+    "sustainable": true,
+    "sustainability_note": "Made from organic cotton",
+    "tags": ["jeans", "denim", "casual", "menswear", "organic"]
+  },
+
+  "FH-PARTY-001": {
+    "product_id": "FH-PARTY-001",
+    "brand_id": "brand_fashionhub_001",
+    "name": "Evening Party Wear Gown",
+    "category": "Party Wear",
+    "subcategory": "Gowns",
+    "price": 2999,
+    "original_price": 4999,
+    "discount_percentage": 40,
+    "in_stock": true,
+    "stock_quantity": 18,
+    "variants": {
+      "sizes": ["S", "M", "L", "XL", "XXL"],
+      "colors": ["Elegant Black", "Royal Blue", "Wine Red", "Emerald Green"]
+    },
+    "description": "Stunning evening gown perfect for parties, weddings, and formal events. Features elegant design with premium fabric and detailed work.",
+    "specifications": {
+      "material": "Polyester with Satin finish",
+      "fit": "Bodycon",
+      "length": "Floor Length",
+      "sleeve": "Sleeveless",
+      "neckline": "V-Neck",
+      "occasion": "Party, Wedding, Formal Events",
+      "care_instructions": "Dry clean only"
+    },
+    "features": [
+      "Premium satin finish",
+      "Back zip closure",
+      "Fully lined",
+      "Elegant drape",
+      "Comfortable fit"
+    ],
+    "size_guide_available": true,
+    "sustainable": false,
+    "tags": ["party", "gown", "formal", "evening wear", "wedding"]
+  },
+
+  "FH-JACKET-001": {
+    "product_id": "FH-JACKET-001",
+    "brand_id": "brand_fashionhub_001",
+    "name": "Winter Leather Jacket",
+    "category": "Winter Wear",
+    "subcategory": "Jackets",
+    "price": 3499,
+    "original_price": 5999,
+    "discount_percentage": 42,
+    "in_stock": true,
+    "stock_quantity": 28,
+    "variants": {
+      "sizes": ["S", "M", "L", "XL", "XXL", "3XL"],
+      "colors": ["Vintage Brown", "Classic Black", "Dark Grey"]
+    },
+    "description": "Premium quality faux leather jacket with warm inner lining. Perfect for cold weather with stylish vintage design.",
+    "specifications": {
+      "material": "PU Leather with Polyester Lining",
+      "fit": "Regular Fit",
+      "closure": "Front Zip",
+      "collar": "Stand Collar",
+      "pockets": "4 (2 outer, 2 inner)",
+      "occasion": "Casual, Winter Wear",
+      "care_instructions": "Wipe with damp cloth, do not wash"
+    },
+    "features": [
+      "Warm inner lining",
+      "Multiple pockets",
+      "Adjustable cuffs",
+      "YKK zipper",
+      "Vintage finish"
+    ],
+    "size_guide_available": true,
+    "sustainable": true,
+    "sustainability_note": "Vegan leather, no animal products",
+    "tags": ["winter", "jacket", "leather", "casual", "vegan"],
+    "special_notes": "Extended 45-day return period for winter collection"
+  },
+
+  "FH-KURTI-001": {
+    "product_id": "FH-KURTI-001",
+    "brand_id": "brand_fashionhub_001",
+    "name": "Ethnic Printed Kurti",
+    "category": "Ethnic Wear",
+    "subcategory": "Kurtis",
+    "price": 899,
+    "original_price": 1299,
+    "discount_percentage": 31,
+    "in_stock": true,
+    "stock_quantity": 75,
+    "variants": {
+      "sizes": ["XS", "S", "M", "L", "XL", "XXL", "3XL"],
+      "colors": ["Pink Floral", "Blue Print", "Green Paisley", "Red Ethnic"]
+    },
+    "description": "Beautiful ethnic kurti with traditional prints. Comfortable for daily wear and festive occasions.",
+    "specifications": {
+      "material": "100% Cotton",
+      "fit": "Straight Fit",
+      "length": "Knee Length",
+      "sleeve": "3/4 Sleeve",
+      "neckline": "Round Neck",
+      "pattern": "Printed",
+      "occasion": "Casual, Festive, Office",
+      "care_instructions": "Machine wash cold, iron on medium heat"
+    },
+    "features": [
+      "Breathable cotton",
+      "Traditional prints",
+      "Side slits",
+      "Comfortable fit",
+      "Easy care"
+    ],
+    "size_guide_available": true,
+    "sustainable": true,
+    "sustainability_note": "100% natural cotton",
+    "tags": ["kurti", "ethnic", "indian wear", "cotton", "casual"]
+  },
+
+  "FH-PANTS-001": {
+    "product_id": "FH-PANTS-001",
+    "brand_id": "brand_fashionhub_001",
+    "name": "Palazzo Pants",
+    "category": "Ethnic Wear",
+    "subcategory": "Bottoms",
+    "price": 699,
+    "original_price": 999,
+    "discount_percentage": 30,
+    "in_stock": true,
+    "stock_quantity": 90,
+    "variants": {
+      "sizes": ["XS", "S", "M", "L", "XL", "XXL", "3XL"],
+      "colors": ["White", "Black", "Navy Blue", "Beige", "Maroon"]
+    },
+    "description": "Comfortable palazzo pants with flared design. Perfect pair with kurtis and ethnic tops.",
+    "specifications": {
+      "material": "Rayon",
+      "fit": "Loose Flared",
+      "waist": "Elastic Waist",
+      "length": "Full Length",
+      "occasion": "Casual, Ethnic",
+      "care_instructions": "Machine wash cold, hang dry"
+    },
+    "features": [
+      "Elastic waistband",
+      "Flared design",
+      "Lightweight fabric",
+      "Comfortable fit",
+      "Easy to wear"
+    ],
+    "size_guide_available": true,
+    "sustainable": false,
+    "tags": ["palazzo", "pants", "ethnic", "bottom wear", "comfortable"]
+  },
+
+  "FH-SHIRT-001": {
+    "product_id": "FH-SHIRT-001",
+    "brand_id": "brand_fashionhub_001",
+    "name": "Formal White Shirt",
+    "category": "Formal Wear",
+    "subcategory": "Shirts",
+    "price": 899,
+    "original_price": 1299,
+    "discount_percentage": 31,
+    "in_stock": true,
+    "stock_quantity": 150,
+    "variants": {
+      "sizes": ["38", "39", "40", "42", "44", "46"],
+      "colors": ["White", "Light Blue", "Light Pink"]
+    },
+    "description": "Classic formal shirt for office and professional settings. Premium cotton with wrinkle-free finish.",
+    "specifications": {
+      "material": "65% Cotton, 35% Polyester",
+      "fit": "Slim Fit",
+      "collar": "Spread Collar",
+      "sleeve": "Full Sleeve",
+      "closure": "Button Front",
+      "pattern": "Solid",
+      "occasion": "Office, Formal",
+      "care_instructions": "Machine wash warm, iron on high heat"
+    },
+    "features": [
+      "Wrinkle-free fabric",
+      "Spread collar",
+      "Button cuffs",
+      "Chest pocket",
+      "Easy care"
+    ],
+    "size_guide_available": true,
+    "sustainable": false,
+    "tags": ["shirt", "formal", "office wear", "menswear", "cotton"]
+  },
+
+  "FH-SAREE-001": {
+    "product_id": "FH-SAREE-001",
+    "brand_id": "brand_fashionhub_001",
+    "name": "Silk Saree with Blouse",
+    "category": "Ethnic Wear",
+    "subcategory": "Sarees",
+    "price": 4999,
+    "original_price": 7999,
+    "discount_percentage": 38,
+    "in_stock": true,
+    "stock_quantity": 12,
+    "variants": {
+      "colors": ["Red", "Royal Blue", "Green", "Magenta", "Gold"]
+    },
+    "description": "Elegant silk saree with matching blouse piece. Perfect for weddings, festivals, and special occasions.",
+    "specifications": {
+      "material": "Art Silk",
+      "length": "5.5 meters saree + 0.8 meter blouse piece",
+      "border": "Zari border",
+      "occasion": "Wedding, Festival, Party",
+      "care_instructions": "Dry clean recommended"
+    },
+    "features": [
+      "Rich silk fabric",
+      "Zari border work",
+      "Matching blouse piece included",
+      "Beautiful drape",
+      "Traditional design"
+    ],
+    "size_guide_available": false,
+    "sustainable": false,
+    "tags": ["saree", "silk", "ethnic", "wedding", "festive"]
+  },
+
+  "FH-JACKET-002": {
+    "product_id": "FH-JACKET-002",
+    "brand_id": "brand_fashionhub_001",
+    "name": "Denim Jacket",
+    "category": "Denim",
+    "subcategory": "Jackets",
+    "price": 1999,
+    "original_price": 2999,
+    "discount_percentage": 33,
+    "in_stock": true,
+    "stock_quantity": 55,
+    "variants": {
+      "sizes": ["S", "M", "L", "XL", "XXL"],
+      "colors": ["Light Blue", "Dark Blue", "Black Denim"]
+    },
+    "description": "Classic denim jacket with vintage wash. Perfect layering piece for casual style.",
+    "specifications": {
+      "material": "100% Cotton Denim",
+      "fit": "Regular Fit",
+      "closure": "Front Button",
+      "collar": "Collared",
+      "pockets": "2 chest pockets, 2 side pockets",
+      "occasion": "Casual",
+      "care_instructions": "Machine wash cold, tumble dry low"
+    },
+    "features": [
+      "Vintage wash",
+      "Multiple pockets",
+      "Button closure",
+      "Classic design",
+      "Durable denim"
+    ],
+    "size_guide_available": true,
+    "sustainable": true,
+    "sustainability_note": "Made from organic denim",
+    "tags": ["jacket", "denim", "casual", "unisex", "organic"]
+  },
+
+  "FH-TSHIRT-001": {
+    "product_id": "FH-TSHIRT-001",
+    "brand_id": "brand_fashionhub_001",
+    "name": "Graphic T-Shirt",
+    "category": "Casual Wear",
+    "subcategory": "T-Shirts",
+    "price": 599,
+    "original_price": 899,
+    "discount_percentage": 33,
+    "in_stock": true,
+    "stock_quantity": 200,
+    "variants": {
+      "sizes": ["S", "M", "L", "XL", "XXL", "3XL"],
+      "colors": ["Black", "White", "Navy Blue", "Grey", "Maroon"]
+    },
+    "description": "Comfortable cotton t-shirt with trendy graphic print. Perfect for everyday casual wear.",
+    "specifications": {
+      "material": "100% Cotton",
+      "fit": "Regular Fit",
+      "neckline": "Round Neck",
+      "sleeve": "Half Sleeve",
+      "pattern": "Graphic Print",
+      "occasion": "Casual, Everyday",
+      "care_instructions": "Machine wash cold, tumble dry low"
+    },
+    "features": [
+      "Soft cotton fabric",
+      "Graphic print",
+      "Breathable",
+      "Comfortable fit",
+      "Color fast"
+    ],
+    "size_guide_available": true,
+    "sustainable": true,
+    "sustainability_note": "100% organic cotton",
+    "tags": ["tshirt", "casual", "graphic", "cotton", "everyday"]
+  },
+
+  "FH-DRESS-002": {
+    "product_id": "FH-DRESS-002",
+    "brand_id": "brand_fashionhub_001",
+    "name": "Maxi Dress",
+    "category": "Dresses",
+    "subcategory": "Maxi Dresses",
+    "price": 1799,
+    "original_price": 2499,
+    "discount_percentage": 28,
+    "in_stock": true,
+    "stock_quantity": 35,
+    "variants": {
+      "sizes": ["XS", "S", "M", "L", "XL", "XXL"],
+      "colors": ["Navy Blue", "Maroon", "Olive Green", "Black"]
+    },
+    "description": "Elegant maxi dress with comfortable fit. Perfect for evening wear and casual outings.",
+    "specifications": {
+      "material": "Rayon",
+      "fit": "A-Line Fit",
+      "length": "Ankle Length",
+      "sleeve": "Sleeveless",
+      "neckline": "V-Neck",
+      "occasion": "Casual, Evening",
+      "care_instructions": "Hand wash cold, hang dry"
+    },
+    "features": [
+      "Flowing fabric",
+      "V-neckline",
+      "Side pockets",
+      "Comfortable fit",
+      "Easy to wear"
+    ],
+    "size_guide_available": true,
+    "sustainable": false,
+    "tags": ["maxi", "dress", "casual", "evening", "comfortable"]
+  },
+
+  "FH-BLAZER-001": {
+    "product_id": "FH-BLAZER-001",
+    "brand_id": "brand_fashionhub_001",
+    "name": "Formal Blazer",
+    "category": "Formal Wear",
+    "subcategory": "Blazers",
+    "price": 3999,
+    "original_price": 5999,
+    "discount_percentage": 33,
+    "in_stock": true,
+    "stock_quantity": 22,
+    "variants": {
+      "sizes": ["38", "40", "42", "44", "46"],
+      "colors": ["Charcoal Grey", "Navy Blue", "Black"]
+    },
+    "description": "Premium formal blazer for professional settings. Tailored fit with quality fabric.",
+    "specifications": {
+      "material": "65% Polyester, 35% Viscose",
+      "fit": "Tailored Fit",
+      "closure": "Single Button",
+      "lapel": "Notch Lapel",
+      "pockets": "2 side pockets, 1 chest pocket, 2 inner pockets",
+      "occasion": "Office, Formal Events",
+      "care_instructions": "Dry clean only"
+    },
+    "features": [
+      "Tailored fit",
+      "Premium fabric",
+      "Multiple pockets",
+      "Fully lined",
+      "Professional look"
+    ],
+    "size_guide_available": true,
+    "sustainable": false,
+    "tags": ["blazer", "formal", "office", "professional", "menswear"]
+  },
+
+  "FH-TROUSER-001": {
+    "product_id": "FH-TROUSER-001",
+    "brand_id": "brand_fashionhub_001",
+    "name": "Formal Trousers",
+    "category": "Formal Wear",
+    "subcategory": "Trousers",
+    "price": 1499,
+    "original_price": 1999,
+    "discount_percentage": 25,
+    "in_stock": true,
+    "stock_quantity": 88,
+    "variants": {
+      "sizes": ["30", "32", "34", "36", "38", "40"],
+      "colors": ["Black", "Charcoal Grey", "Navy Blue", "Beige"]
+    },
+    "description": "Classic formal trousers with perfect fit. Essential for professional wardrobe.",
+    "specifications": {
+      "material": "65% Polyester, 35% Viscose",
+      "fit": "Regular Fit",
+      "rise": "Mid Rise",
+      "closure": "Zipper with Hook",
+      "pockets": "4 pockets",
+      "occasion": "Office, Formal",
+      "care_instructions": "Machine wash cold, iron on medium"
+    },
+    "features": [
+      "Wrinkle-resistant",
+      "Belt loops",
+      "Side pockets",
+      "Back pockets",
+      "Professional finish"
+    ],
+    "size_guide_available": true,
+    "sustainable": false,
+    "tags": ["trouser", "formal", "office", "professional", "menswear"]
+  },
+
+  "FH-TOP-001": {
+    "product_id": "FH-TOP-001",
+    "brand_id": "brand_fashionhub_001",
+    "name": "Western Top",
+    "category": "Western Wear",
+    "subcategory": "Tops",
+    "price": 799,
+    "original_price": 1199,
+    "discount_percentage": 33,
+    "in_stock": true,
+    "stock_quantity": 65,
+    "variants": {
+      "sizes": ["XS", "S", "M", "L", "XL", "XXL"],
+      "colors": ["Mint Green", "Coral Pink", "Sky Blue", "White", "Black"]
+    },
+    "description": "Stylish western top for casual and semi-formal occasions. Comfortable and trendy.",
+    "specifications": {
+      "material": "Polyester",
+      "fit": "Regular Fit",
+      "neckline": "V-Neck",
+      "sleeve": "Short Sleeve",
+      "pattern": "Solid",
+      "occasion": "Casual, Office",
+      "care_instructions": "Machine wash cold, hang dry"
+    },
+    "features": [
+      "Soft fabric",
+      "V-neckline",
+      "Comfortable fit",
+      "Easy care",
+      "Versatile style"
+    ],
+    "size_guide_available": true,
+    "sustainable": false,
+    "tags": ["top", "western", "casual", "office", "womenswear"]
+  },
+
+  "FH-SCARF-001": {
+    "product_id": "FH-SCARF-001",
+    "brand_id": "brand_fashionhub_001",
+    "name": "Silk Scarf",
+    "category": "Accessories",
+    "subcategory": "Scarves",
+    "price": 499,
+    "original_price": 799,
+    "discount_percentage": 38,
+    "in_stock": true,
+    "stock_quantity": 45,
+    "variants": {
+      "colors": ["Floral Pink", "Abstract Blue", "Geometric Black", "Paisley Red"]
+    },
+    "description": "Elegant silk scarf with beautiful prints. Perfect accessory to elevate any outfit.",
+    "specifications": {
+      "material": "100% Silk",
+      "dimensions": "180cm x 90cm",
+      "pattern": "Printed",
+      "occasion": "Casual, Formal",
+      "care_instructions": "Dry clean or hand wash gently"
+    },
+    "features": [
+      "Pure silk",
+      "Beautiful prints",
+      "Versatile styling",
+      "Soft texture",
+      "Premium quality"
+    ],
+    "size_guide_available": false,
+    "sustainable": false,
+    "tags": ["scarf", "silk", "accessory", "printed", "elegant"]
+  }
+}
