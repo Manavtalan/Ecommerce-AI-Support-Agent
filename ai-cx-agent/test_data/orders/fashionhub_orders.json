@@ -1,0 +1,373 @@
+{
+  "12345": {
+    "order_id": "12345",
+    "brand_id": "brand_fashionhub_001",
+    "customer_email": "priya.sharma@email.com",
+    "customer_name": "Priya Sharma",
+    "status": "shipped",
+    "order_date": "2026-01-24T10:30:00Z",
+    "items": [
+      {
+        "product_id": "FH-DRESS-001",
+        "name": "Summer Floral Dress",
+        "size": "M",
+        "color": "Blue Floral",
+        "quantity": 1,
+        "price": 1499,
+        "category": "Dresses"
+      }
+    ],
+    "total": 1499,
+    "payment_method": "prepaid",
+    "shipping": {
+      "address": "123 MG Road, Koramangala 5th Block, Bangalore 560034, Karnataka",
+      "courier": "Delhivery",
+      "tracking_number": "DEL123456789",
+      "tracking_url": "https://www.delhivery.com/track/DEL123456789",
+      "shipped_date": "2026-01-25T08:00:00Z",
+      "estimated_delivery": "2026-01-29",
+      "last_update": "Out for delivery - Bangalore Hub",
+      "current_location": "Bangalore Local Office",
+      "delivery_attempts": 0
+    },
+    "notes": "First time customer, used FIRST999 code for free shipping"
+  },
+
+  "12346": {
+    "order_id": "12346",
+    "brand_id": "brand_fashionhub_001",
+    "customer_email": "rahul.verma@email.com",
+    "customer_name": "Rahul Verma",
+    "status": "processing",
+    "order_date": "2026-01-27T14:20:00Z",
+    "items": [
+      {
+        "product_id": "FH-JEANS-001",
+        "name": "Classic Blue Jeans",
+        "size": "32",
+        "color": "Dark Blue",
+        "quantity": 2,
+        "price": 1299,
+        "category": "Denim"
+      }
+    ],
+    "total": 2598,
+    "payment_method": "upi",
+    "shipping": null,
+    "notes": "Order confirmed, quality check in progress, expected to ship today"
+  },
+
+  "12347": {
+    "order_id": "12347",
+    "brand_id": "brand_fashionhub_001",
+    "customer_email": "anita.desai@email.com",
+    "customer_name": "Anita Desai",
+    "status": "delivered",
+    "order_date": "2026-01-17T11:15:00Z",
+    "items": [
+      {
+        "product_id": "FH-PARTY-001",
+        "name": "Evening Party Wear Gown",
+        "size": "L",
+        "color": "Elegant Black",
+        "quantity": 1,
+        "price": 2999,
+        "category": "Party Wear"
+      }
+    ],
+    "total": 2999,
+    "payment_method": "cod",
+    "shipping": {
+      "address": "456 Park Street, Bandra West, Mumbai 400050, Maharashtra",
+      "courier": "BlueDart",
+      "tracking_number": "BD987654321",
+      "shipped_date": "2026-01-18T10:00:00Z",
+      "delivered_date": "2026-01-24T16:30:00Z",
+      "delivery_person": "Ramesh Kumar",
+      "signature_obtained": true,
+      "cod_amount_collected": 2999
+    },
+    "notes": "Successfully delivered, customer very satisfied, posted positive review"
+  },
+
+  "12348": {
+    "order_id": "12348",
+    "brand_id": "brand_fashionhub_001",
+    "customer_email": "vikram.singh@email.com",
+    "customer_name": "Vikram Singh",
+    "status": "shipped",
+    "order_date": "2026-01-15T09:45:00Z",
+    "items": [
+      {
+        "product_id": "FH-JACKET-001",
+        "name": "Winter Leather Jacket",
+        "size": "XL",
+        "color": "Vintage Brown",
+        "quantity": 1,
+        "price": 3499,
+        "category": "Winter Wear"
+      }
+    ],
+    "total": 3499,
+    "payment_method": "prepaid",
+    "shipping": {
+      "address": "789 Sector 5, Dwarka, New Delhi 110075, Delhi",
+      "courier": "FedEx",
+      "tracking_number": "FDX456789123",
+      "tracking_url": "https://www.fedex.com/fedextrack/?trknbr=FDX456789123",
+      "shipped_date": "2026-01-16T12:00:00Z",
+      "estimated_delivery": "2026-01-25",
+      "last_update": "Delayed - Weather conditions in transit route",
+      "delay_reason": "Severe fog in Delhi-NCR region causing courier delays across all service providers",
+      "current_location": "Regional Sorting Hub - Delhi (Delayed)",
+      "revised_eta": "2026-01-30",
+      "delay_days": 5
+    },
+    "notes": "DELAYED ORDER - Customer likely frustrated. Weather-related delay, not company fault. Premium product."
+  },
+
+  "12349": {
+    "order_id": "12349",
+    "brand_id": "brand_fashionhub_001",
+    "customer_email": "sneha.iyer@email.com",
+    "customer_name": "Sneha Iyer",
+    "status": "shipped",
+    "order_date": "2026-01-26T16:00:00Z",
+    "items": [
+      {
+        "product_id": "FH-KURTI-001",
+        "name": "Ethnic Printed Kurti",
+        "size": "S",
+        "color": "Pink Floral",
+        "quantity": 1,
+        "price": 899,
+        "category": "Ethnic Wear"
+      },
+      {
+        "product_id": "FH-PANTS-001",
+        "name": "Palazzo Pants",
+        "size": "S",
+        "color": "White",
+        "quantity": 1,
+        "price": 699,
+        "category": "Ethnic Wear"
+      }
+    ],
+    "total": 1598,
+    "payment_method": "prepaid",
+    "shipping": {
+      "address": "234 Residency Road, Ashok Nagar, Chennai 600083, Tamil Nadu",
+      "courier": "Delhivery",
+      "tracking_number": "DEL999888777",
+      "tracking_url": "https://www.delhivery.com/track/DEL999888777",
+      "shipped_date": "2026-01-27T09:00:00Z",
+      "estimated_delivery": "2026-01-31",
+      "last_update": "In transit - Chennai bound",
+      "current_location": "Hyderabad Transit Hub"
+    },
+    "notes": "Multi-item order, combo purchase"
+  },
+
+  "12350": {
+    "order_id": "12350",
+    "brand_id": "brand_fashionhub_001",
+    "customer_email": "amit.patel@email.com",
+    "customer_name": "Amit Patel",
+    "status": "delivered",
+    "order_date": "2026-01-20T13:00:00Z",
+    "items": [
+      {
+        "product_id": "FH-SHIRT-001",
+        "name": "Formal White Shirt",
+        "size": "M",
+        "color": "White",
+        "quantity": 1,
+        "price": 899,
+        "category": "Formal Wear"
+      }
+    ],
+    "total": 899,
+    "payment_method": "prepaid",
+    "shipping": {
+      "address": "567 SG Highway, Satellite, Ahmedabad 380015, Gujarat",
+      "courier": "Ecom Express",
+      "tracking_number": "ECM111222333",
+      "shipped_date": "2026-01-21T11:00:00Z",
+      "delivered_date": "2026-01-25T14:00:00Z"
+    },
+    "customer_complaint": "Received wrong size (L instead of M)",
+    "complaint_status": "exchange_requested",
+    "notes": "WRONG ITEM SIZE - Customer claims received L instead of M. Verify and process exchange."
+  },
+
+  "12351": {
+    "order_id": "12351",
+    "brand_id": "brand_fashionhub_001",
+    "customer_email": "meera.reddy@email.com",
+    "customer_name": "Meera Reddy",
+    "status": "cancelled",
+    "order_date": "2026-01-26T08:00:00Z",
+    "cancelled_date": "2026-01-26T10:30:00Z",
+    "items": [
+      {
+        "product_id": "FH-SAREE-001",
+        "name": "Silk Saree with Blouse",
+        "color": "Red",
+        "quantity": 1,
+        "price": 4999,
+        "category": "Ethnic Wear"
+      }
+    ],
+    "total": 4999,
+    "payment_method": "prepaid",
+    "shipping": null,
+    "cancellation_reason": "Customer changed mind before shipping",
+    "refund_status": "processed",
+    "refund_amount": 4999,
+    "refund_date": "2026-01-26T11:00:00Z",
+    "notes": "Cancelled within 2 hours of order, full refund processed immediately"
+  },
+
+  "12352": {
+    "order_id": "12352",
+    "brand_id": "brand_fashionhub_001",
+    "customer_email": "rajesh.kumar@email.com",
+    "customer_name": "Rajesh Kumar",
+    "status": "shipped",
+    "order_date": "2026-01-23T15:30:00Z",
+    "items": [
+      {
+        "product_id": "FH-JACKET-002",
+        "name": "Denim Jacket",
+        "size": "L",
+        "color": "Light Blue",
+        "quantity": 1,
+        "price": 1999,
+        "category": "Denim"
+      },
+      {
+        "product_id": "FH-TSHIRT-001",
+        "name": "Graphic T-Shirt",
+        "size": "L",
+        "color": "Black",
+        "quantity": 2,
+        "price": 599,
+        "category": "Casual Wear"
+      }
+    ],
+    "total": 3197,
+    "payment_method": "cod",
+    "shipping": {
+      "address": "890 Civil Lines, Ludhiana 141001, Punjab",
+      "courier": "BlueDart",
+      "tracking_number": "BD445566778",
+      "tracking_url": "https://www.bluedart.com/tracking/BD445566778",
+      "shipped_date": "2026-01-24T10:00:00Z",
+      "estimated_delivery": "2026-01-29",
+      "last_update": "In transit",
+      "current_location": "Chandigarh Hub",
+      "cod_amount": 3246
+    },
+    "notes": "COD order, multi-item purchase"
+  },
+
+  "12353": {
+    "order_id": "12353",
+    "brand_id": "brand_fashionhub_001",
+    "customer_email": "kavita.sharma@email.com",
+    "customer_name": "Kavita Sharma",
+    "status": "delivered",
+    "order_date": "2026-01-18T12:00:00Z",
+    "items": [
+      {
+        "product_id": "FH-DRESS-002",
+        "name": "Maxi Dress",
+        "size": "M",
+        "color": "Navy Blue",
+        "quantity": 1,
+        "price": 1799,
+        "category": "Dresses"
+      }
+    ],
+    "total": 1799,
+    "payment_method": "prepaid",
+    "shipping": {
+      "address": "321 Jubilee Hills, Hyderabad 500033, Telangana",
+      "courier": "Delhivery",
+      "tracking_number": "DEL777888999",
+      "shipped_date": "2026-01-19T09:00:00Z",
+      "delivered_date": "2026-01-23T15:00:00Z"
+    },
+    "customer_complaint": "Product damaged in transit - torn fabric",
+    "complaint_status": "replacement_sent",
+    "complaint_resolution_date": "2026-01-24T10:00:00Z",
+    "replacement_tracking": "DEL888999000",
+    "notes": "DAMAGED PRODUCT - Fabric tear during shipping. Replacement sent immediately."
+  },
+
+  "12354": {
+    "order_id": "12354",
+    "brand_id": "brand_fashionhub_001",
+    "customer_email": "arjun.mehta@email.com",
+    "customer_name": "Arjun Mehta",
+    "status": "processing",
+    "order_date": "2026-01-28T09:00:00Z",
+    "items": [
+      {
+        "product_id": "FH-BLAZER-001",
+        "name": "Formal Blazer",
+        "size": "42",
+        "color": "Charcoal Grey",
+        "quantity": 1,
+        "price": 3999,
+        "category": "Formal Wear"
+      },
+      {
+        "product_id": "FH-TROUSER-001",
+        "name": "Formal Trousers",
+        "size": "34",
+        "color": "Black",
+        "quantity": 2,
+        "price": 1499,
+        "category": "Formal Wear"
+      }
+    ],
+    "total": 6997,
+    "payment_method": "prepaid",
+    "shipping": null,
+    "notes": "High-value order, just placed today, quality check pending"
+  },
+
+  "12355": {
+    "order_id": "12355",
+    "brand_id": "brand_fashionhub_001",
+    "customer_email": "neha.gupta@email.com",
+    "customer_name": "Neha Gupta",
+    "status": "shipped",
+    "order_date": "2026-01-25T14:45:00Z",
+    "items": [
+      {
+        "product_id": "FH-TOP-001",
+        "name": "Western Top",
+        "size": "S",
+        "color": "Mint Green",
+        "quantity": 1,
+        "price": 799,
+        "category": "Western Wear"
+      }
+    ],
+    "total": 799,
+    "payment_method": "upi",
+    "shipping": {
+      "address": "654 Sector 15, Noida 201301, Uttar Pradesh",
+      "courier": "Delhivery",
+      "tracking_number": "DEL321654987",
+      "tracking_url": "https://www.delhivery.com/track/DEL321654987",
+      "shipped_date": "2026-01-26T11:00:00Z",
+      "estimated_delivery": "2026-01-30",
+      "last_update": "Out for delivery",
+      "current_location": "Noida Local Office"
+    },
+    "notes": "Standard delivery, repeat customer"
+  }
+}
