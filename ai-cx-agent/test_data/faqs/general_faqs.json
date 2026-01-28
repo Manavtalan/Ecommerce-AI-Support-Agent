@@ -1,0 +1,182 @@
+[
+  {
+    "faq_id": "FAQ-GEN-001",
+    "question": "How do I track my order?",
+    "answer": "You can track your order in three easy ways: (1) Click the tracking link in your shipping confirmation email/SMS, (2) Log into your FashionHub account and go to 'My Orders', or (3) WhatsApp us at +91-9876543210 with your order number. You'll get real-time updates on your package location and estimated delivery.",
+    "category": "Order Tracking",
+    "keywords": ["track", "order", "tracking", "status", "where"],
+    "priority": "high",
+    "applies_to": ["all_brands"]
+  },
+  {
+    "faq_id": "FAQ-GEN-002",
+    "question": "What payment methods do you accept?",
+    "answer": "We accept all major payment methods: Credit/Debit Cards (Visa, Mastercard, Amex, Rupay), UPI (Google Pay, PhonePe, Paytm), Net Banking (all major banks), Digital Wallets (Paytm, PhonePe, Amazon Pay), and Cash on Delivery (COD available for orders up to ₹15,000 with ₹49 COD charge).",
+    "category": "Payment",
+    "keywords": ["payment", "pay", "method", "card", "upi", "cod"],
+    "priority": "high",
+    "applies_to": ["all_brands"]
+  },
+  {
+    "faq_id": "FAQ-GEN-003",
+    "question": "When will I get my refund?",
+    "answer": "Refunds are initiated within 48 hours of receiving your returned product. The amount will be credited to your original payment method within 5-7 business days for cards/net banking, and 3-5 business days for UPI/wallets. For COD orders, we'll transfer to your bank account within 5-7 business days after you provide your account details.",
+    "category": "Refunds",
+    "keywords": ["refund", "money", "when", "timeline", "credit"],
+    "priority": "high",
+    "applies_to": ["all_brands"]
+  },
+  {
+    "faq_id": "FAQ-GEN-004",
+    "question": "How do I change my delivery address?",
+    "answer": "If your order hasn't shipped yet, you can easily change the address! Contact us immediately via WhatsApp (+91-9876543210), email (support@fashionhub.com), or through your account. We'll update it at no extra cost. Unfortunately, once the order is shipped, the address cannot be changed, but you can coordinate directly with the courier.",
+    "category": "Shipping",
+    "keywords": ["change", "address", "delivery", "location", "update"],
+    "priority": "medium",
+    "applies_to": ["all_brands"]
+  },
+  {
+    "faq_id": "FAQ-GEN-005",
+    "question": "What if I receive a damaged product?",
+    "answer": "We're so sorry if that happened! Please contact us within 48 hours of delivery with photos of the damaged product. We'll arrange an immediate replacement at no extra cost, or process a full refund including shipping charges. You don't need to return the damaged item - just share the photos with us.",
+    "category": "Returns & Complaints",
+    "keywords": ["damaged", "broken", "defective", "problem", "issue"],
+    "priority": "high",
+    "applies_to": ["all_brands"]
+  },
+  {
+    "faq_id": "FAQ-GEN-006",
+    "question": "Do you ship internationally?",
+    "answer": "Currently, we ship only within India. We're working on expanding to international destinations soon! Stay tuned for updates. Within India, we deliver to all states and Union Territories, though some remote areas may have slightly longer delivery times.",
+    "category": "Shipping",
+    "keywords": ["international", "overseas", "abroad", "foreign", "country"],
+    "priority": "low",
+    "applies_to": ["all_brands"]
+  },
+  {
+    "faq_id": "FAQ-GEN-007",
+    "question": "How long does delivery take?",
+    "answer": "Delivery timelines vary by location: Metro cities (Mumbai, Delhi, Bangalore, etc.) receive orders in 3-5 business days, Tier 2 cities in 5-7 business days, and remote areas in 7-10 business days. Express shipping is available for ₹199 if you need it faster (1-2 days earlier). Orders are typically dispatched within 1-2 business days.",
+    "category": "Shipping",
+    "keywords": ["delivery", "shipping", "how long", "timeline", "days"],
+    "priority": "high",
+    "applies_to": ["all_brands"]
+  },
+  {
+    "faq_id": "FAQ-GEN-008",
+    "question": "Is Cash on Delivery (COD) available?",
+    "answer": "Yes! COD is available across India for orders up to ₹15,000. There's a small COD handling charge of ₹49 per order. Some remote pincodes may not have COD availability - you'll be notified at checkout if COD isn't available for your location.",
+    "category": "Payment",
+    "keywords": ["cod", "cash", "delivery", "payment", "available"],
+    "priority": "high",
+    "applies_to": ["all_brands"]
+  },
+  {
+    "faq_id": "FAQ-GEN-009",
+    "question": "What is your return policy?",
+    "answer": "We offer a hassle-free 30-day return policy! You can return products within 30 days of delivery for any reason - size issues, color mismatch, quality concerns, or simply changed your mind. Returns are free for damaged/wrong items. We also prefer exchanges over returns - get your perfect size in just 3-5 days!",
+    "category": "Returns",
+    "keywords": ["return", "policy", "days", "how to", "window"],
+    "priority": "high",
+    "applies_to": ["all_brands"]
+  },
+  {
+    "faq_id": "FAQ-GEN-010",
+    "question": "How do I cancel my order?",
+    "answer": "You can cancel your order anytime before it ships! Log into your account, go to 'My Orders', select the order, and click 'Cancel Order'. You'll get an instant refund. If the order has already shipped, you can refuse delivery or return it after receiving. For urgent cancellations, WhatsApp us at +91-9876543210.",
+    "category": "Cancellation",
+    "keywords": ["cancel", "order", "stop", "cancellation", "how"],
+    "priority": "high",
+    "applies_to": ["all_brands"]
+  },
+  {
+    "faq_id": "FAQ-GEN-011",
+    "question": "Do you offer free shipping?",
+    "answer": "Yes! All orders above ₹999 get FREE standard shipping. Orders below ₹999 have a ₹99 shipping charge. First-time customers can use code FIRST999 for free shipping on orders above ₹999. Express shipping (1-2 days faster) is available for ₹199.",
+    "category": "Shipping",
+    "keywords": ["free", "shipping", "delivery", "charge", "threshold"],
+    "priority": "high",
+    "applies_to": ["all_brands"]
+  },
+  {
+    "faq_id": "FAQ-GEN-012",
+    "question": "Can I exchange my order?",
+    "answer": "Absolutely! Exchanges are faster than returns. You can exchange within 30 days for a different size, color, or even a different product. We ship the new item immediately after pickup, so you get it in just 3-5 days. Size and color exchanges are 100% free. Much faster than waiting for a refund!",
+    "category": "Exchange",
+    "keywords": ["exchange", "swap", "change", "different", "size"],
+    "priority": "high",
+    "applies_to": ["all_brands"]
+  },
+  {
+    "faq_id": "FAQ-GEN-013",
+    "question": "How do I create an account?",
+    "answer": "Creating an account is easy! Click 'Sign Up' on our website, enter your email and create a password, and verify your email. Or simply place an order - we'll automatically create an account for you. Benefits include order tracking, faster checkout, exclusive offers, and easy returns/exchanges.",
+    "category": "Account",
+    "keywords": ["account", "sign up", "register", "create", "profile"],
+    "priority": "low",
+    "applies_to": ["all_brands"]
+  },
+  {
+    "faq_id": "FAQ-GEN-014",
+    "question": "What if my tracking hasn't updated?",
+    "answer": "Tracking numbers are activated within 24 hours of dispatch. Sometimes courier systems take a bit longer to update. If your tracking hasn't updated in 48 hours, or shows no movement for 3+ days, please contact us with your order number and we'll investigate with the courier immediately.",
+    "category": "Order Tracking",
+    "keywords": ["tracking", "not updated", "stuck", "not moving", "status"],
+    "priority": "medium",
+    "applies_to": ["all_brands"]
+  },
+  {
+    "faq_id": "FAQ-GEN-015",
+    "question": "Can I modify my order after placing it?",
+    "answer": "If your order hasn't shipped yet, we can help! You can change the delivery address, add items (as a new order), or cancel items. Contact us immediately via WhatsApp (+91-9876543210) with your order number. Once shipped, modifications aren't possible, but you can always return/exchange after delivery.",
+    "category": "Order Modification",
+    "keywords": ["modify", "change", "edit", "update", "order"],
+    "priority": "medium",
+    "applies_to": ["all_brands"]
+  },
+  {
+    "faq_id": "FAQ-GEN-016",
+    "question": "What if I'm not home for delivery?",
+    "answer": "No worries! The courier will attempt delivery 3 times. If you miss all attempts, the package returns to our warehouse and we'll notify you. Contact us within 7 days to rearrange delivery at no extra cost. Pro tip: Track your order and coordinate with the courier directly - they usually call before delivery!",
+    "category": "Shipping",
+    "keywords": ["not home", "missed", "delivery", "attempt", "redeliver"],
+    "priority": "medium",
+    "applies_to": ["all_brands"]
+  },
+  {
+    "faq_id": "FAQ-GEN-017",
+    "question": "Do you have a customer support number?",
+    "answer": "Yes! You can reach us at +91-9876543210 (Mon-Sat, 9 AM - 7 PM IST). For faster support, WhatsApp us on the same number - we typically respond within 15 minutes during business hours. You can also email us at support@fashionhub.com. We're here to help!",
+    "category": "Customer Support",
+    "keywords": ["contact", "support", "phone", "number", "help", "customer service"],
+    "priority": "high",
+    "applies_to": ["all_brands"]
+  },
+  {
+    "faq_id": "FAQ-GEN-018",
+    "question": "Is my payment information secure?",
+    "answer": "Absolutely! We use industry-standard SSL encryption and work with PCI-DSS compliant payment gateways (Razorpay). We never store your complete card details - all payment information is securely processed by certified payment partners. Your financial data is completely safe with us.",
+    "category": "Payment Security",
+    "keywords": ["secure", "safe", "payment", "security", "encryption"],
+    "priority": "medium",
+    "applies_to": ["all_brands"]
+  },
+  {
+    "faq_id": "FAQ-GEN-019",
+    "question": "Can I order as a guest without creating an account?",
+    "answer": "Yes, you can checkout as a guest! Just provide your email and phone number at checkout. However, we recommend creating an account for easier order tracking, faster future checkouts, exclusive offers, and simpler returns/exchanges. We'll send you order updates via email/SMS regardless.",
+    "category": "Account",
+    "keywords": ["guest", "no account", "checkout", "without", "register"],
+    "priority": "low",
+    "applies_to": ["all_brands"]
+  },
+  {
+    "faq_id": "FAQ-GEN-020",
+    "question": "What happens if I receive the wrong item?",
+    "answer": "We sincerely apologize if that happens! Contact us immediately with your order number and photos of the item received. We'll arrange immediate pickup and send you the correct item via express shipping at absolutely no cost to you. You'll also receive a discount code for the inconvenience.",
+    "category": "Returns & Complaints",
+    "keywords": ["wrong", "item", "incorrect", "mistake", "different"],
+    "priority": "high",
+    "applies_to": ["all_brands"]
+  }
+]

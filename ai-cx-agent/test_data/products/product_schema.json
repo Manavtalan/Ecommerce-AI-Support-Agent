@@ -1,0 +1,64 @@
+{
+  "schema_version": "1.0.0",
+  "last_updated": "2026-01-28",
+  "description": "Product catalog structure",
+  
+  "fields": {
+    "product_id": {
+      "type": "string",
+      "description": "Unique product identifier",
+      "format": "BRAND_CATEGORY_NUMBER",
+      "example": "FH-DRESS-001",
+      "required": true
+    },
+    "name": {
+      "type": "string",
+      "description": "Product display name",
+      "example": "Summer Floral Dress",
+      "required": true
+    },
+    "brand_id": {
+      "type": "string",
+      "description": "Brand identifier",
+      "example": "brand_fashionhub_001",
+      "required": true
+    },
+    "category": {
+      "type": "string",
+      "description": "Product category",
+      "example": "Dresses",
+      "required": true
+    },
+    "price": {
+      "type": "number",
+      "description": "Current price in INR",
+      "example": 1499,
+      "required": true
+    },
+    "original_price": {
+      "type": "number",
+      "description": "MRP before discount",
+      "required": false
+    },
+    "in_stock": {
+      "type": "boolean",
+      "description": "Availability status",
+      "required": true
+    },
+    "variants": {
+      "type": "object",
+      "description": "Size/color options",
+      "required": false
+    },
+    "description": {
+      "type": "string",
+      "description": "Product description",
+      "required": true
+    },
+    "specifications": {
+      "type": "object",
+      "description": "Product-specific details",
+      "required": false
+    }
+  }
+}

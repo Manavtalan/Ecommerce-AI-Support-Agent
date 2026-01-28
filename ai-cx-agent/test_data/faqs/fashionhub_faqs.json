@@ -1,0 +1,123 @@
+[
+  {
+    "faq_id": "FAQ-FH-001",
+    "brand_id": "brand_fashionhub_001",
+    "question": "How do I find my size?",
+    "answer": "Finding your perfect size is easy! Every product page has a detailed size chart with measurements in inches and cm. Measure your bust, waist, and hips, then match with our chart. Still confused? Check customer reviews - many mention if the item runs small/large. Or WhatsApp our style team at +91-9876543210 with your measurements for personalized sizing advice!",
+    "category": "Sizing",
+    "keywords": ["size", "chart", "measurement", "fit", "how to measure"],
+    "priority": "high"
+  },
+  {
+    "faq_id": "FAQ-FH-002",
+    "question": "Can I exchange for a different size?",
+    "answer": "Yes! Size exchanges are 100% FREE and super quick. Request exchange within 30 days, we'll pick up the item and ship the new size simultaneously. You'll receive the correct size in just 3-5 days. If you're unsure about sizing, you can even order 2 sizes, keep what fits, and return the other!",
+    "category": "Exchange",
+    "keywords": ["exchange", "size", "different", "fit", "change"],
+    "priority": "high"
+  },
+  {
+    "faq_id": "FAQ-FH-003",
+    "question": "What fabrics do you use?",
+    "answer": "We use premium, comfortable fabrics! Our collection includes: Cotton (breathable, daily wear), Cotton blends (easy care, wrinkle-resistant), Denim (durable, stylish), Silk & Art Silk (festive, elegant), Rayon (flowy, comfortable), Polyester blends (formal, professional). Each product page lists exact fabric composition and care instructions.",
+    "category": "Product Information",
+    "keywords": ["fabric", "material", "cloth", "quality", "type"],
+    "priority": "medium"
+  },
+  {
+    "faq_id": "FAQ-FH-004",
+    "question": "How do I care for my clothing?",
+    "answer": "Care instructions are on every product page and on the garment tag. Generally: Cotton items can be machine washed cold, Silk/Art Silk should be dry cleaned, Denim can be washed inside out, Delicate items should be hand washed. Always check the specific care tag! Following care instructions ensures your fashion pieces last longer and look great!",
+    "category": "Product Care",
+    "keywords": ["wash", "care", "clean", "maintain", "instructions"],
+    "priority": "medium"
+  },
+  {
+    "faq_id": "FAQ-FH-005",
+    "question": "Do you have a style guide?",
+    "answer": "Yes! Every product page has styling tips and suggestions. We also have a style blog with trend updates, outfit ideas, and fashion tips. Plus, our style team is available on WhatsApp for personalized styling advice - share your occasion, body type, and preferences, and we'll recommend perfect outfits!",
+    "category": "Styling",
+    "keywords": ["style", "guide", "fashion", "how to wear", "tips"],
+    "priority": "low"
+  },
+  {
+    "faq_id": "FAQ-FH-006",
+    "question": "What if the color looks different from the website?",
+    "answer": "We photograph products in natural lighting to show accurate colors. However, slight variations can occur due to screen settings and lighting. If the color is significantly different than expected, you can return or exchange within 30 days, no questions asked! We want you to love what you receive.",
+    "category": "Product Quality",
+    "keywords": ["color", "different", "looks", "shade", "variation"],
+    "priority": "medium"
+  },
+  {
+    "faq_id": "FAQ-FH-007",
+    "question": "Do you offer alterations?",
+    "answer": "We don't offer in-house alterations, but we can recommend trusted tailors in your city! Our products come in sizes XS to 4XL for inclusive sizing. If you need custom alterations after receiving your order, local tailors can help. Keep in mind that altered items may not be eligible for return/exchange.",
+    "category": "Alterations",
+    "keywords": ["alter", "tailor", "stitch", "custom", "fit"],
+    "priority": "low"
+  },
+  {
+    "faq_id": "FAQ-FH-008",
+    "question": "Can I order custom sizes?",
+    "answer": "Currently, we offer standard sizes from XS to 4XL which fit most body types. Custom sizing isn't available yet, but it's something we're working on! If you're between sizes, check our detailed size charts or contact our style team for recommendations. You can always exchange if the fit isn't perfect!",
+    "category": "Sizing",
+    "keywords": ["custom", "size", "made to measure", "bespoke", "tailor"],
+    "priority": "low"
+  },
+  {
+    "faq_id": "FAQ-FH-009",
+    "question": "Are your products sustainable?",
+    "answer": "Yes! We're committed to sustainable fashion. Many products are made from organic cotton, and our winter jackets use vegan leather (no animal products). Look for the 'Sustainable' tag on product pages. We've been sourcing from ethical manufacturers since 2022 and continue expanding our eco-friendly collection!",
+    "category": "Sustainability",
+    "keywords": ["sustainable", "eco", "organic", "ethical", "environment"],
+    "priority": "medium"
+  },
+  {
+    "faq_id": "FAQ-FH-010",
+    "question": "Do you have size-inclusive options?",
+    "answer": "Absolutely! We offer sizes from XS to 4XL because fashion is for everyone! Our size range accommodates diverse body types. Check individual product pages for available sizes. If a size is temporarily out of stock, notify us and we'll alert you when it's back. We're proud of our inclusive sizing commitment!",
+    "category": "Sizing",
+    "keywords": ["plus size", "inclusive", "all sizes", "large", "extended"],
+    "priority": "medium"
+  },
+  {
+    "faq_id": "FAQ-FH-011",
+    "question": "What's the quality of your products?",
+    "answer": "Quality is our top priority! Every product undergoes quality checks before shipping. We source from trusted manufacturers, use premium fabrics, and ensure proper stitching and finishing. Check customer reviews and ratings on product pages - our quality speaks for itself! If you ever receive a quality issue, we'll replace it immediately.",
+    "category": "Quality",
+    "keywords": ["quality", "good", "standard", "premium", "durable"],
+    "priority": "high"
+  },
+  {
+    "faq_id": "FAQ-FH-012",
+    "question": "How often do you add new arrivals?",
+    "answer": "We add fresh styles every week! Follow us on Instagram (@fashionhub.in) for first looks at new arrivals. Sign up for our newsletter to get notified about new collections, restocks, and exclusive early access. We're always bringing you the latest fashion trends!",
+    "category": "Products",
+    "keywords": ["new", "arrivals", "latest", "collection", "fresh"],
+    "priority": "low"
+  },
+  {
+    "faq_id": "FAQ-FH-013",
+    "question": "Do you offer gift wrapping?",
+    "answer": "Yes! Gift wrapping is available for ₹99 per order. Select the 'Gift Wrap' option at checkout. We'll beautifully package your items with elegant wrapping paper and a gift tag (you can add a custom message). Perfect for birthdays, anniversaries, or any special occasion!",
+    "category": "Gift Services",
+    "keywords": ["gift", "wrap", "present", "packaging", "special"],
+    "priority": "low"
+  },
+  {
+    "faq_id": "FAQ-FH-014",
+    "question": "What's your winter collection return policy?",
+    "answer": "Great news! Our winter collection (jackets, coats, sweaters) has an EXTENDED 45-day return window instead of the standard 30 days. This gives you more time to decide. All other return conditions remain the same - unworn, with tags, in original condition. Winter fashion deserves extra consideration!",
+    "category": "Returns",
+    "keywords": ["winter", "return", "jacket", "extended", "45 days"],
+    "priority": "medium"
+  },
+  {
+    "faq_id": "FAQ-FH-015",
+    "question": "Can I get personalized fashion recommendations?",
+    "answer": "Yes! Our style team offers FREE personalized recommendations. WhatsApp us at +91-9876543210 or email style@fashionhub.com with: your occasion, body type, color preferences, and budget. We'll suggest perfect outfits from our collection. Think of us as your personal fashion stylist - no extra charge!",
+    "category": "Styling Services",
+    "keywords": ["recommend", "suggest", "help", "style", "advice", "personal"],
+    "priority": "medium"
+  }
+]

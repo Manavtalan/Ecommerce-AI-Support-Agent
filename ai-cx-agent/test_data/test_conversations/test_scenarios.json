@@ -1,0 +1,409 @@
+{
+  "scenarios": [
+    {
+      "scenario_id": "TEST-001",
+      "scenario_name": "Happy Path - Order Status",
+      "brand_id": "brand_fashionhub_001",
+      "description": "Customer checks order status, gets information, satisfied with response",
+      "difficulty": "easy",
+      "expected_behavior": "Agent provides status, tracking, ETA without asking for clarification. Remembers context in follow-up.",
+      "success_criteria": {
+        "context_retention": true,
+        "provides_tracking": true,
+        "provides_eta": true,
+        "no_repetition": true,
+        "friendly_tone": true
+      },
+      "conversation": [
+        {
+          "turn": 1,
+          "speaker": "user",
+          "message": "Hi, where is my order 12345?",
+          "expected_intent": "order_status",
+          "expected_emotion": "neutral"
+        },
+        {
+          "turn": 2,
+          "speaker": "assistant",
+          "expected_actions": [
+            "lookup_order_12345",
+            "detect_emotion_neutral",
+            "compose_response_with_order_details"
+          ],
+          "must_include": ["status", "courier", "tracking"],
+          "must_not_include": ["which order", "order number"]
+        },
+        {
+          "turn": 3,
+          "speaker": "user",
+          "message": "When will it arrive?",
+          "expected_intent": "order_status_followup",
+          "expected_emotion": "neutral"
+        },
+        {
+          "turn": 4,
+          "speaker": "assistant",
+          "expected_context_retention": true,
+          "must_remember": "order_12345",
+          "must_include": ["estimated_delivery", "date"],
+          "must_not_include": ["which order", "order number", "12345 again"]
+        },
+        {
+          "turn": 5,
+          "speaker": "user",
+          "message": "Great, thanks!",
+          "expected_emotion": "positive"
+        },
+        {
+          "turn": 6,
+          "speaker": "assistant",
+          "expected_emotion_detected": "positive",
+          "should_close_warmly": true
+        }
+      ]
+    },
+    {
+      "scenario_id": "TEST-002",
+      "scenario_name": "Frustrated Customer - Delayed Order",
+      "brand_id": "brand_fashionhub_001",
+      "description": "Customer is angry about delayed order, needs empathy and explanation",
+      "difficulty": "hard",
+      "expected_behavior": "Agent detects frustration, shows empathy FIRST, then explains delay with specifics, offers solution",
+      "success_criteria": {
+        "emotion_detection": "frustrated",
+        "empathy_shown": true,
+        "explains_delay": true,
+        "context_retention": true,
+        "de_escalation": true
+      },
+      "conversation": [
+        {
+          "turn": 1,
+          "speaker": "user",
+          "message": "My order 12348 is LATE! This is ridiculous!",
+          "expected_intent": "order_status",
+          "expected_emotion": "frustrated",
+          "emotion_intensity": 8
+        },
+        {
+          "turn": 2,
+          "speaker": "assistant",
+          "expected_emotion_detected": "frustrated",
+          "must_include_first": "empathy",
+          "required_elements": ["empathy_statement", "order_details", "delay_reason"],
+          "empathy_examples": ["understand", "frustrating", "hear you"],
+          "must_not_be": "robotic"
+        },
+        {
+          "turn": 3,
+          "speaker": "user",
+          "message": "Why is it taking so long???",
+          "expected_emotion": "frustrated",
+          "expected_intent": "order_status_followup"
+        },
+        {
+          "turn": 4,
+          "speaker": "assistant",
+          "expected_context_retention": true,
+          "must_remember": "order_12348",
+          "should_explain": "specific_delay_reason",
+          "must_include": ["weather", "Delhi", "fog"],
+          "should_provide": "revised_eta",
+          "tone": "calm_and_empathetic"
+        },
+        {
+          "turn": 5,
+          "speaker": "user",
+          "message": "This is the last time I order from you",
+          "expected_emotion": "very_frustrated"
+        },
+        {
+          "turn": 6,
+          "speaker": "assistant",
+          "expected_escalation": false,
+          "should_deescalate": true,
+          "must_not": "argue",
+          "should_show": "commitment_to_fix",
+          "acceptable_escalation": false
+        }
+      ]
+    },
+    {
+      "scenario_id": "TEST-003",
+      "scenario_name": "Multi-Turn Context Retention (15 turns)",
+      "brand_id": "brand_fashionhub_001",
+      "description": "15-turn conversation testing if agent remembers order number throughout",
+      "difficulty": "medium",
+      "expected_behavior": "Agent never asks 'which order?' after initial mention. Maintains context for 15+ exchanges.",
+      "success_criteria": {
+        "context_retention_turns": 15,
+        "no_repeat_questions": true,
+        "all_responses_relevant": true
+      },
+      "conversation": [
+        {"turn": 1, "speaker": "user", "message": "Order status for 12345"},
+        {"turn": 2, "speaker": "assistant", "must_remember": "order_12345"},
+        {"turn": 3, "speaker": "user", "message": "What's the courier?"},
+        {"turn": 4, "speaker": "assistant", "must_remember": "order_12345", "must_not_ask": "which order"},
+        {"turn": 5, "speaker": "user", "message": "When was it shipped?"},
+        {"turn": 6, "speaker": "assistant", "must_remember": "order_12345"},
+        {"turn": 7, "speaker": "user", "message": "Can I track it?"},
+        {"turn": 8, "speaker": "assistant", "must_remember": "order_12345", "should_provide": "tracking_link"},
+        {"turn": 9, "speaker": "user", "message": "What's the delivery address?"},
+        {"turn": 10, "speaker": "assistant", "must_remember": "order_12345"},
+        {"turn": 11, "speaker": "user", "message": "Can I change the address?"},
+        {"turn": 12, "speaker": "assistant", "must_remember": "order_12345", "should_explain": "cannot_change_after_shipping"},
+        {"turn": 13, "speaker": "user", "message": "How much did I pay?"},
+        {"turn": 14, "speaker": "assistant", "must_remember": "order_12345", "should_provide": "order_total"},
+        {"turn": 15, "speaker": "user", "message": "What did I order?"},
+        {"turn": 16, "speaker": "assistant", "must_remember": "order_12345", "should_list": "order_items"}
+      ]
+    },
+    {
+      "scenario_id": "TEST-004",
+      "scenario_name": "Cancellation Request - Post Shipping",
+      "brand_id": "brand_fashionhub_001",
+      "description": "Customer wants to cancel shipped order, agent explains can't cancel but offers return",
+      "difficulty": "medium",
+      "expected_behavior": "Agent explains cannot cancel shipped orders, offers return as alternative, stays helpful",
+      "success_criteria": {
+        "explains_policy": true,
+        "offers_alternative": true,
+        "does_not_escalate_immediately": true,
+        "helpful_tone": true
+      },
+      "conversation": [
+        {
+          "turn": 1,
+          "speaker": "user",
+          "message": "I want to cancel order 12345",
+          "expected_intent": "cancellation"
+        },
+        {
+          "turn": 2,
+          "speaker": "assistant",
+          "should_check": "order_status",
+          "should_explain": "cannot_cancel_shipped",
+          "should_offer": "return_alternative",
+          "expected_escalation": true,
+          "escalation_reason": "cancellation_request"
+        }
+      ]
+    },
+    {
+      "scenario_id": "TEST-005",
+      "scenario_name": "Return Policy Inquiry",
+      "brand_id": "brand_fashionhub_001",
+      "description": "Customer asks about return policy, agent retrieves from RAG and explains clearly",
+      "difficulty": "medium",
+      "expected_behavior": "Agent uses RAG to retrieve return policy, cites accurately, explains in customer-friendly language",
+      "success_criteria": {
+        "uses_rag": true,
+        "accurate_policy": true,
+        "mentions_30_days": true,
+        "clear_explanation": true
+      },
+      "conversation": [
+        {
+          "turn": 1,
+          "speaker": "user",
+          "message": "What's your return policy?",
+          "expected_intent": "policy_question"
+        },
+        {
+          "turn": 2,
+          "speaker": "assistant",
+          "expected_tool": "search_knowledge_base",
+          "expected_rag_query": "return policy",
+          "must_include": ["30 days", "return"],
+          "should_be": "clear_and_friendly"
+        },
+        {
+          "turn": 3,
+          "speaker": "user",
+          "message": "Can I return opened packages?",
+          "expected_intent": "policy_question_followup"
+        },
+        {
+          "turn": 4,
+          "speaker": "assistant",
+          "expected_context_retention": true,
+          "expected_rag_usage": true,
+          "should_explain": "eligibility_criteria"
+        }
+      ]
+    },
+    {
+      "scenario_id": "TEST-006",
+      "scenario_name": "Product Inquiry - Sizing",
+      "brand_id": "brand_fashionhub_001",
+      "description": "Customer asks about product sizing, agent provides information from product catalog",
+      "difficulty": "easy",
+      "expected_behavior": "Agent looks up product, provides available sizes, offers size guide help",
+      "success_criteria": {
+        "uses_product_tool": true,
+        "lists_sizes": true,
+        "offers_size_guide": true
+      },
+      "conversation": [
+        {
+          "turn": 1,
+          "speaker": "user",
+          "message": "What sizes do you have for the floral dress?",
+          "expected_intent": "product_inquiry"
+        },
+        {
+          "turn": 2,
+          "speaker": "assistant",
+          "expected_tool": "get_product_info",
+          "should_list": "available_sizes",
+          "should_mention": "size_guide"
+        }
+      ]
+    },
+    {
+      "scenario_id": "TEST-007",
+      "scenario_name": "Confused Customer - Technical Terms",
+      "brand_id": "brand_fashionhub_001",
+      "description": "Customer confused about something, agent uses simple language to explain",
+      "difficulty": "easy",
+      "expected_behavior": "Agent detects confusion, explains in simple terms, no jargon",
+      "success_criteria": {
+        "detects_confusion": true,
+        "uses_simple_language": true,
+        "no_jargon": true,
+        "helpful_tone": true
+      },
+      "conversation": [
+        {
+          "turn": 1,
+          "speaker": "user",
+          "message": "What does COD mean?",
+          "expected_emotion": "confused"
+        },
+        {
+          "turn": 2,
+          "speaker": "assistant",
+          "expected_emotion_detected": "confused",
+          "should_explain": "cash_on_delivery_simply",
+          "must_not_use": "jargon",
+          "tone": "patient_and_clear"
+        }
+      ]
+    },
+    {
+      "scenario_id": "TEST-008",
+      "scenario_name": "Order Not Found",
+      "brand_id": "brand_fashionhub_001",
+      "description": "Customer provides invalid order number, agent handles gracefully",
+      "difficulty": "medium",
+      "expected_behavior": "Agent tries to find order, politely informs not found, asks to verify, offers to search by email",
+      "success_criteria": {
+        "attempts_lookup": true,
+        "polite_message": true,
+        "offers_alternatives": true,
+        "no_blame": true
+      },
+      "conversation": [
+        {
+          "turn": 1,
+          "speaker": "user",
+          "message": "Where's order 99999?",
+          "expected_intent": "order_status"
+        },
+        {
+          "turn": 2,
+          "speaker": "assistant",
+          "expected_tool": "get_order_status",
+          "tool_result": "not_found",
+          "should_ask": "verify_order_number",
+          "should_offer": "search_by_email",
+          "tone": "helpful_not_blaming"
+        }
+      ]
+    },
+    {
+      "scenario_id": "TEST-009",
+      "scenario_name": "Multiple Issues in One Message",
+      "brand_id": "brand_fashionhub_001",
+      "description": "Customer asks about multiple things at once, agent addresses all systematically",
+      "difficulty": "hard",
+      "expected_behavior": "Agent identifies all questions, addresses them in organized manner, nothing forgotten",
+      "success_criteria": {
+        "identifies_all_issues": true,
+        "addresses_all": true,
+        "organized_response": true,
+        "nothing_forgotten": true
+      },
+      "conversation": [
+        {
+          "turn": 1,
+          "speaker": "user",
+          "message": "My order 12345 is late and I also want to know about returns and can I change my address?",
+          "expected_intents": ["order_status", "policy_question", "address_change"]
+        },
+        {
+          "turn": 2,
+          "speaker": "assistant",
+          "should_address": ["order_status", "return_policy", "address_change"],
+          "should_be": "organized",
+          "should_not": "miss_any_question"
+        }
+      ]
+    },
+    {
+      "scenario_id": "TEST-010",
+      "scenario_name": "Brand Voice Consistency",
+      "brand_id": "brand_fashionhub_001",
+      "description": "Same question to FashionHub - should get casual, friendly, emoji response",
+      "difficulty": "easy",
+      "expected_behavior": "Response matches FashionHub's casual, friendly voice with moderate emoji usage",
+      "success_criteria": {
+        "matches_brand_voice": true,
+        "uses_signature_phrases": true,
+        "appropriate_emoji_usage": true,
+        "friendly_tone": true
+      },
+      "conversation": [
+        {
+          "turn": 1,
+          "speaker": "user",
+          "message": "Where's my order?",
+          "expected_intent": "order_status"
+        },
+        {
+          "turn": 2,
+          "speaker": "assistant",
+          "expected_tone": "friendly_professional",
+          "expected_formality": "casual",
+          "should_use": "emoji (moderate)",
+          "may_use_phrases": ["We're here to help", "Let's get this sorted"],
+          "must_not_use": ["Unfortunately", "I apologize for any inconvenience"]
+        }
+      ]
+    }
+  ],
+  "test_configuration": {
+    "total_scenarios": 10,
+    "difficulty_distribution": {
+      "easy": 4,
+      "medium": 4,
+      "hard": 2
+    },
+    "categories_covered": [
+      "order_status",
+      "emotion_detection",
+      "context_retention",
+      "policy_questions",
+      "product_inquiries",
+      "cancellations",
+      "brand_voice",
+      "error_handling",
+      "multi_issue_handling"
+    ],
+    "success_threshold": {
+      "minimum_pass_rate": 0.80,
+      "critical_scenarios_must_pass": ["TEST-001", "TEST-002", "TEST-003"]
+    }
+  }
+}
