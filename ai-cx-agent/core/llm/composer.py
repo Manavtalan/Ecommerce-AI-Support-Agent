@@ -1,374 +1,239 @@
-# llm_composer.py
 """
-LLM Response Composer - The AI Communication Layer
-This is the ONLY place where AI generates customer-facing responses.
-
-ARCHITECTURE:
-- Facts come from code (deterministic)
-- Words come from AI (this module)
-- Business logic NEVER lives in prompts
+LLM Response Composer
+Handles structured response generation with scenario-based prompting
 """
 
-from openai import OpenAI
-from config import OPENAI_API_KEY
+import os
 from typing import Dict, List, Optional
-import json
+from openai import OpenAI
+from dotenv import load_dotenv
 
-client = OpenAI(api_key=OPENAI_API_KEY)
+# Load environment variables
+load_dotenv()
 
-
-# ============================================================================
-# SYSTEM PROMPTS - The AI's Communication Instructions
-# ============================================================================
-
-BASE_COMMUNICATION_PROMPT = """
-You are a highly skilled customer support agent communication layer.
-
-YOUR ROLE:
-- Transform facts into natural, empathetic responses
-- Explain policies clearly and warmly
-- Reassure customers while staying truthful
-- Adapt tone based on customer emotion
-
-YOUR CONSTRAINTS:
-- Use ONLY the facts provided to you
-- NEVER invent order details, dates, or tracking info
-- NEVER promise actions outside your allowed scope
-- NEVER override business policies
-
-YOUR STYLE:
-- Sound like a real human, not a chatbot
-- Be warm but professional
-- Acknowledge emotions before facts
-- Offer help, not excuses
-- Keep responses conversational (2-4 paragraphs)
-
-FORBIDDEN PHRASES:
-- "I apologize for the inconvenience" (overused)
-- "Please be patient" (condescending)
-- "Unfortunately..." without offering alternatives
-- Any invented facts or promises
-"""
-
-
-SCENARIO_PROMPTS = {
-    "delay_explanation": """
-SCENARIO: Customer asking why their order is delayed/taking long
-
-YOUR TASK:
-1. Acknowledge their concern about the wait
-2. Explain the situation using ONLY provided facts
-3. Provide context (seasonality, courier networks, etc.) IF delay is normal
-4. Reassure with concrete next steps
-5. Offer tracking or other helpful options
-
-TONE: Empathetic, transparent, action-oriented
-""",
-    
-    "cancellation_request": """
-SCENARIO: Customer wants to cancel their order
-
-YOUR TASK:
-1. Acknowledge their request warmly
-2. Explain current order status clearly
-3. If cancellation is NOT possible, explain WHY (based on facts)
-4. Offer alternatives (return process, etc.)
-5. Give customer control over next steps
-
-TONE: Understanding, honest, solution-focused
-DO NOT: Immediately escalate without explaining options
-""",
-    
-    "frustration_response": """
-SCENARIO: Customer is frustrated or upset
-
-YOUR TASK:
-1. Acknowledge the emotion directly and sincerely
-2. Take responsibility for the experience
-3. Provide clarity on what happened
-4. Offer immediate next steps
-5. Show you're personally invested in helping
-
-TONE: Calm, apologetic, empowering
-PRIORITY: De-escalate emotion before solving problem
-""",
-    
-    "order_status_simple": """
-SCENARIO: Straightforward order status query
-
-YOUR TASK:
-1. Provide status clearly and positively
-2. Include key details (courier, ETA, tracking)
-3. Proactively offer related help
-4. Keep it brief but warm
-
-TONE: Helpful, efficient, friendly
-""",
-    
-    "order_not_found": """
-SCENARIO: Order number not found in system
-
-YOUR TASK:
-1. Acknowledge the issue without blame
-2. Offer possible explanations
-3. Suggest concrete next steps
-4. Offer to help investigate
-
-TONE: Helpful, not accusatory, solution-focused
-""",
-    
-    "policy_explanation": """
-SCENARIO: Explaining a policy (returns, refunds, etc.)
-
-YOUR TASK:
-1. Explain the policy clearly and simply
-2. Provide the reasoning behind it
-3. Highlight what IS possible within policy
-4. Offer to answer specific questions
-
-TONE: Transparent, fair, helpful
-""",
-    
-    "proactive_followup": """
-SCENARIO: Offering additional help after answering main query
-
-YOUR TASK:
-1. Briefly suggest related helpful actions
-2. Don't be pushy or sales-y
-3. Give customer easy next steps
-4. Show you're thinking ahead for them
-
-TONE: Thoughtful, optional, genuinely helpful
-"""
-}
-
-
-# ============================================================================
-# LLM Response Composer - Single Entry Point for All AI Communication
-# ============================================================================
 
 class LLMResponseComposer:
     """
-    The single source of AI-generated customer communication.
-    
-    NEVER call OpenAI directly from other modules.
-    ALL customer-facing AI text goes through this class.
+    Composes natural, context-aware responses using LLM
+    Prevents hallucinations by grounding responses in facts
     """
     
-    def __init__(self, brand_config: Optional[Dict] = None):
-        """
-        Initialize composer with optional brand customization.
-        
-        Args:
-            brand_config: Brand voice settings (tone, personality, etc.)
-        """
-        self.brand_config = brand_config or {}
-        self.default_tone = self.brand_config.get("tone", "friendly_professional")
+    def __init__(self, model: str = "gpt-4o-mini"):
+        self.model = model
+        # Initialize client here, not at module level
+        self._client = None
+    
+    @property
+    def client(self):
+        """Lazy initialization of OpenAI client"""
+        if self._client is None:
+            api_key = os.getenv("OPENAI_API_KEY")
+            if not api_key:
+                raise ValueError("OPENAI_API_KEY not found in environment")
+            self._client = OpenAI(api_key=api_key)
+        return self._client
     
     def compose_response(
         self,
         scenario: str,
         facts: Dict,
-        constraints: List[str],
+        constraints: List[str] = None,
         emotion: str = "neutral",
-        custom_instructions: Optional[str] = None
+        brand_voice: Optional[Dict] = None
     ) -> str:
         """
-        Compose a natural language response using AI.
-        
-        This is the ONLY method that should be called from outside this module.
+        Compose a response based on scenario and facts
         
         Args:
-            scenario: Type of response needed (e.g., "delay_explanation")
-            facts: Dictionary of verified facts to use in response
-            constraints: List of what AI cannot do/promise
-            emotion: Detected customer emotion ("neutral", "frustrated", "confused")
-            custom_instructions: Optional additional guidance for this specific case
-            
+            scenario: Type of response needed (order_status, delay_explanation, etc.)
+            facts: Verified facts to include (order details, tracking, etc.)
+            constraints: What agent CANNOT do (cancel orders, process refunds, etc.)
+            emotion: Detected customer emotion
+            brand_voice: Brand voice guidelines (optional)
+        
         Returns:
-            Natural language response as string
-            
-        Example:
-            response = composer.compose_response(
-                scenario="delay_explanation",
-                facts={
-                    "order_id": "12345",
-                    "status": "shipped",
-                    "eta": "2026-01-25",
-                    "days_since_order": 10
-                },
-                constraints=["cannot_cancel", "cannot_change_delivery_date"],
-                emotion="frustrated"
-            )
+            Natural, empathetic response string
         """
         
-        # Build the complete prompt
-        system_prompt = self._build_system_prompt(scenario, emotion)
-        user_prompt = self._build_user_prompt(facts, constraints, custom_instructions)
+        if constraints is None:
+            constraints = []
         
+        # Build system prompt
+        system_prompt = self._build_system_prompt(brand_voice, constraints)
+        
+        # Build user prompt based on scenario
+        user_prompt = self._build_scenario_prompt(scenario, facts, emotion)
+        
+        # Call LLM
         try:
-            response = client.chat.completions.create(
-                model="gpt-4o-mini",
+            response = self.client.chat.completions.create(
+                model=self.model,
                 messages=[
                     {"role": "system", "content": system_prompt},
                     {"role": "user", "content": user_prompt}
                 ],
-                temperature=0.7,  # Higher for natural variation
-                max_tokens=400,
-                presence_penalty=0.3,  # Reduce repetitive phrasing
-                frequency_penalty=0.3
+                temperature=0.7,
+                max_tokens=500
             )
             
-            generated_response = response.choices[0].message.content
-            
-            # Validate response (check for hallucinations)
-            if self._contains_hallucination(generated_response, facts):
-                # Fallback to safe response
-                return self._safe_fallback_response(scenario, facts)
-            
-            return generated_response
-            
+            return response.choices[0].message.content.strip()
+        
         except Exception as e:
-            # If AI fails, return safe fallback
-            print(f"[LLM COMPOSER ERROR] {e}")
-            return self._safe_fallback_response(scenario, facts)
+            print(f"Warning: LLM call failed: {e}")
+            # Fallback response if LLM fails
+            return self._fallback_response(scenario, facts, emotion)
     
-    def _build_system_prompt(self, scenario: str, emotion: str) -> str:
-        """Build the system prompt based on scenario and emotion."""
-        
-        # Start with base communication rules
-        prompt = BASE_COMMUNICATION_PROMPT
-        
-        # Add scenario-specific instructions
-        if scenario in SCENARIO_PROMPTS:
-            prompt += "\n\n" + SCENARIO_PROMPTS[scenario]
-        
-        # Adjust for customer emotion
-        if emotion == "frustrated":
-            prompt += "\n\nCUSTOMER EMOTION: FRUSTRATED - Prioritize empathy and de-escalation"
-        elif emotion == "confused":
-            prompt += "\n\nCUSTOMER EMOTION: CONFUSED - Prioritize clarity and simple language"
-        elif emotion == "urgent":
-            prompt += "\n\nCUSTOMER EMOTION: URGENT - Acknowledge urgency, provide immediate next steps"
-        
-        # Add brand voice if configured
-        if self.brand_config:
-            prompt += self._inject_brand_voice()
-        
-        return prompt
-    
-    def _build_user_prompt(
+    def _build_system_prompt(
         self,
-        facts: Dict,
-        constraints: List[str],
-        custom_instructions: Optional[str]
+        brand_voice: Optional[Dict],
+        constraints: List[str]
     ) -> str:
-        """Build the user prompt with facts and constraints."""
+        """Build system prompt with brand voice and constraints"""
         
-        prompt = "Generate a customer support response using these details:\n\n"
+        base_prompt = """You are a helpful customer support agent for an e-commerce brand.
+
+Your communication style:
+- Friendly and professional
+- Empathetic and understanding
+- Clear and concise
+- Natural, not robotic
+
+CRITICAL RULES:
+- ONLY use information provided in the facts
+- NEVER make up order numbers, dates, or tracking information
+- If information is missing, acknowledge it
+- Be honest about what you can and cannot do
+"""
         
-        # Add facts
-        prompt += "FACTS (use ONLY these, never invent):\n"
-        for key, value in facts.items():
-            prompt += f"- {key}: {value}\n"
+        # Add brand voice if provided
+        if brand_voice:
+            tone = brand_voice.get('tone', 'friendly_professional')
+            formality = brand_voice.get('formality', 'casual')
+            base_prompt += f"\n\nBrand Voice: {tone}, {formality} formality\n"
+            
+            if 'forbidden_phrases' in brand_voice:
+                forbidden = ", ".join(brand_voice['forbidden_phrases'][:3])
+                base_prompt += f"Never use phrases like: {forbidden}\n"
         
         # Add constraints
         if constraints:
-            prompt += "\nCONSTRAINTS (what you CANNOT do/promise):\n"
+            base_prompt += "\n\nYou CANNOT:\n"
             for constraint in constraints:
-                prompt += f"- {constraint}\n"
+                base_prompt += f"- {constraint}\n"
         
-        # Add custom instructions if provided
-        if custom_instructions:
-            prompt += f"\nADDITIONAL GUIDANCE:\n{custom_instructions}\n"
-        
-        prompt += "\nGenerate the response now:"
-        
-        return prompt
+        return base_prompt
     
-    def _inject_brand_voice(self) -> str:
-        """Inject brand-specific voice instructions."""
+    def _build_scenario_prompt(
+        self,
+        scenario: str,
+        facts: Dict,
+        emotion: str
+    ) -> str:
+        """Build scenario-specific prompt with facts"""
         
-        voice_prompt = "\n\nBRAND VOICE:"
+        # Emotion context
+        emotion_context = ""
+        if emotion == "frustrated":
+            emotion_context = "The customer is frustrated. Show empathy FIRST, then provide solution."
+        elif emotion == "confused":
+            emotion_context = "The customer seems confused. Use simple, clear language."
+        elif emotion == "urgent":
+            emotion_context = "The customer needs urgent help. Be direct and action-oriented."
         
-        if "personality" in self.brand_config:
-            traits = ", ".join(self.brand_config["personality"])
-            voice_prompt += f"\n- Personality: {traits}"
-        
-        if "signature_phrases" in self.brand_config:
-            phrases = ", ".join(self.brand_config["signature_phrases"])
-            voice_prompt += f"\n- Encouraged phrases: {phrases}"
-        
-        if "avoid_phrases" in self.brand_config:
-            avoid = ", ".join(self.brand_config["avoid_phrases"])
-            voice_prompt += f"\n- Avoid: {avoid}"
-        
-        return voice_prompt
-    
-    def _contains_hallucination(self, response: str, facts: Dict) -> bool:
-        """
-        Check if AI response contains hallucinated information.
-        
-        Returns True if hallucination detected, False if safe.
-        """
-        
-        # Common hallucination indicators
-        hallucination_phrases = [
-            "I'll cancel that for you",
-            "I've processed the refund",
-            "I'll upgrade your shipping",
-            "tracking number is",
-            "order number is"
-        ]
-        
-        response_lower = response.lower()
-        
-        # Check for forbidden promises
-        for phrase in hallucination_phrases:
-            if phrase in response_lower:
-                print(f"[HALLUCINATION DETECTED] Phrase: {phrase}")
-                return True
-        
-        # Check if response invents facts not in provided facts
-        # (This is a simple heuristic - can be enhanced)
-        
-        return False
-    
-    def _safe_fallback_response(self, scenario: str, facts: Dict) -> str:
-        """
-        Generate a safe, deterministic response when AI fails or hallucinates.
-        """
-        
-        order_id = facts.get("order_id", "your order")
-        
-        fallback_responses = {
-            "delay_explanation": f"I understand you're asking about the delivery timeline for {order_id}. Let me connect you with our support team who can provide detailed information and help resolve any concerns.",
+        # Scenario templates
+        scenarios = {
+            "order_status_simple": f"""
+{emotion_context}
+
+Customer asked about their order status.
+
+FACTS:
+{self._format_facts(facts)}
+
+Provide the order status in a natural, friendly way. Include tracking information if available.
+""",
             
-            "cancellation_request": f"I'd like to help with your cancellation request for {order_id}. Let me connect you with our team who can review the order status and discuss your options.",
+            "delay_explanation": f"""
+{emotion_context}
+
+Customer's order is delayed and they're asking about it.
+
+FACTS:
+{self._format_facts(facts)}
+
+Explain the delay with empathy, provide revised ETA, and reassure the customer.
+""",
             
-            "order_status_simple": f"I have information about {order_id}. Let me get you to someone who can share the full details.",
+            "frustrated_customer": f"""
+The customer is FRUSTRATED or ANGRY.
+
+FACTS:
+{self._format_facts(facts)}
+
+Respond with:
+1. EMPATHY first (acknowledge their frustration)
+2. EXPLANATION (what happened)
+3. SOLUTION (what you're doing about it)
+4. REASSURANCE
+
+Be warm and understanding. This is critical for customer satisfaction.
+""",
             
-            "default": "I want to make sure I give you accurate information. Let me connect you with our support team who can help you right away."
+            "policy_question": f"""
+{emotion_context}
+
+Customer asked about a policy.
+
+POLICY INFORMATION:
+{self._format_facts(facts)}
+
+Explain the policy in simple, customer-friendly terms. Be helpful.
+""",
+            
+            "general_query": f"""
+{emotion_context}
+
+Customer asked a question.
+
+AVAILABLE INFORMATION:
+{self._format_facts(facts)}
+
+Provide a helpful, natural response. If you don't have enough information, ask for clarification.
+"""
         }
         
-        return fallback_responses.get(scenario, fallback_responses["default"])
-
-
-# ============================================================================
-# Helper Functions
-# ============================================================================
-
-def quick_compose(scenario: str, facts: Dict, constraints: List[str] = None) -> str:
-    """
-    Quick wrapper for simple one-off compositions.
+        return scenarios.get(scenario, scenarios["general_query"])
     
-    For most use cases, instantiate LLMResponseComposer and reuse it.
-    """
-    composer = LLMResponseComposer()
-    return composer.compose_response(
-        scenario=scenario,
-        facts=facts,
-        constraints=constraints or []
-    )
+    def _format_facts(self, facts: Dict) -> str:
+        """Format facts dictionary into readable text"""
+        formatted = []
+        for key, value in facts.items():
+            formatted.append(f"- {key}: {value}")
+        return "\n".join(formatted) if formatted else "No specific facts provided"
+    
+    def _fallback_response(
+        self,
+        scenario: str,
+        facts: Dict,
+        emotion: str
+    ) -> str:
+        """Fallback response if LLM fails"""
+        
+        if emotion == "frustrated":
+            return "I understand your concern and I'm here to help. Let me look into this for you right away."
+        
+        if scenario == "order_status_simple" and "order_id" in facts:
+            return f"Let me check on order {facts['order_id']} for you."
+        
+        return "I'm here to help! Could you provide a bit more detail so I can assist you better?"
 
 
+# Singleton instance
+_composer_instance = None
+
+def get_composer() -> LLMResponseComposer:
+    """Get singleton composer instance"""
+    global _composer_instance
+    if _composer_instance is None:
+        _composer_instance = LLMResponseComposer()
+    return _composer_instance
