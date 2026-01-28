@@ -1,15 +1,22 @@
-# Core dependencies
+# Core AI/ML
 openai==1.12.0
 python-dotenv==1.0.0
+
+# Configuration
 pyyaml==6.0.1
+
+# Data handling
+pandas==2.1.4
 
 # Testing
 pytest==7.4.4
 pytest-asyncio==0.21.1
 
-# Data handling
-pandas==2.1.4
+# Utilities
+requests==2.31.0
+python-dateutil==2.8.2
 
-# Future additions
-# faiss-cpu==1.7.4  # Day 2: RAG
-# fastapi==0.109.0  # Day 5: API
+# Day 2+ (commented for now)
+# faiss-cpu==1.7.4        # For RAG vector search
+# langchain==0.1.0        # For RAG pipeline
+# sentence-transformers==2.3.1  # For embeddings
