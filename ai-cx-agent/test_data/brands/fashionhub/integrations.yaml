@@ -1,0 +1,223 @@
+# INTEGRATION CONFIGURATIONS FOR FASHIONHUB
+
+# SHOPIFY INTEGRATION
+shopify:
+  enabled: true
+  store_url: "fashionhub.myshopify.com"
+  api_version: "2024-01"
+  
+  # Sync configuration
+  sync_enabled: true
+  sync_interval_minutes: 15
+  
+  # What to sync
+  entities_to_sync:
+    orders: true
+    products: true
+    inventory: true
+    customers: false  # Privacy - don't sync customer data
+  
+  # Webhook endpoints (for real-time updates)
+  webhooks:
+    orders_create: "/webhooks/fashionhub/orders/create"
+    orders_update: "/webhooks/fashionhub/orders/update"
+    orders_fulfilled: "/webhooks/fashionhub/orders/fulfilled"
+    orders_cancelled: "/webhooks/fashionhub/orders/cancelled"
+    products_create: "/webhooks/fashionhub/products/create"
+    products_update: "/webhooks/fashionhub/products/update"
+    inventory_update: "/webhooks/fashionhub/inventory/update"
+  
+  # API credentials (from environment variables)
+  # FASHIONHUB_SHOPIFY_KEY
+  # FASHIONHUB_SHOPIFY_SECRET
+
+# WHATSAPP BUSINESS API
+whatsapp:
+  enabled: true
+  business_phone: "+919876543210"
+  business_name: "FashionHub"
+  
+  # Features to enable
+  features:
+    quick_replies: true
+    button_messages: true
+    list_messages: true
+    media_support: true
+    location_sharing: false
+    payment_integration: false  # Future
+  
+  # Message templates (pre-approved)
+  templates:
+    order_shipped:
+      name: "order_shipped_v1"
+      language: "en"
+    order_delivered:
+      name: "order_delivered_v1"
+      language: "en"
+    return_initiated:
+      name: "return_initiated_v1"
+      language: "en"
+  
+  # Rate limits
+  rate_limits:
+    messages_per_second: 5
+    messages_per_day: 10000
+    
+  # Business hours auto-reply
+  auto_reply:
+    enabled: true
+    outside_hours_message: "Thanks for reaching out! We'll respond within 2 hours during business hours (Mon-Sat 9AM-7PM IST). For urgent queries, call +91-9876543210."
+  
+  # API credentials (from environment)
+  # FASHIONHUB_WHATSAPP_KEY
+  # FASHIONHUB_WHATSAPP_SECRET
+
+# EMAIL SUPPORT
+email:
+  enabled: true
+  support_email: "support@fashionhub.com"
+  smtp_host: "smtp.gmail.com"
+  smtp_port: 587
+  use_tls: true
+  
+  # Features
+  features:
+    html_emails: true
+    thread_tracking: true
+    attachment_support: true
+    read_receipts: false
+  
+  # Auto-response
+  auto_response:
+    enabled: true
+    message: "Thank you for contacting FashionHub! We've received your email and will respond within 2 hours during business hours."
+  
+  # Email signature
+  signature: |
+    Best regards,
+    FashionHub Support Team
+    📧 support@fashionhub.com
+    📞 +91-9876543210
+    🌐 www.fashionhub.com
+  
+  # Credentials (from environment)
+  # FASHIONHUB_EMAIL_USERNAME
+  # FASHIONHUB_EMAIL_PASSWORD
+
+# INSTAGRAM BUSINESS
+instagram:
+  enabled: false  # Phase 2 feature
+  business_account: "@fashionhub.in"
+  
+  # When enabled
+  features:
+    dm_support: true
+    story_replies: true
+    comment_monitoring: false
+    
+  # API credentials
+  # FASHIONHUB_INSTAGRAM_ACCESS_TOKEN
+
+# PAYMENT GATEWAYS (Informational - not for agent to process)
+payment_gateways:
+  razorpay:
+    enabled: true
+    methods:
+      - credit_card
+      - debit_card
+      - upi
+      - netbanking
+      - wallets
+      - cod
+  
+  # For agent knowledge only (not to process payments)
+  accepted_methods_description:
+    - "Credit/Debit Cards (Visa, Mastercard, Amex, Rupay)"
+    - "UPI (Google Pay, PhonePe, Paytm)"
+    - "Net Banking (all major banks)"
+    - "Wallets (Paytm, PhonePe, Amazon Pay)"
+    - "Cash on Delivery (up to ₹15,000)"
+
+# COURIER TRACKING INTEGRATIONS
+courier_tracking:
+  delhivery:
+    enabled: true
+    tracking_url_format: "https://www.delhivery.com/track/{tracking_number}"
+  
+  bluedart:
+    enabled: true
+    tracking_url_format: "https://www.bluedart.com/tracking/{tracking_number}"
+  
+  fedex:
+    enabled: true
+    tracking_url_format: "https://www.fedex.com/fedextrack/?trknbr={tracking_number}"
+  
+  ecom_express:
+    enabled: true
+    tracking_url_format: "https://ecomexpress.in/tracking/?awb_field={tracking_number}"
+
+# ANALYTICS & MONITORING
+analytics:
+  google_analytics:
+    enabled: true
+    tracking_id: "UA-XXXXXXXX-X"
+  
+  customer_satisfaction:
+    post_conversation_survey: true
+    rating_prompt: "How was your experience today? (1-5 stars)"
+  
+  conversation_logging:
+    enabled: true
+    log_level: "INFO"
+    pii_redaction: true
+
+# FEATURE FLAGS
+feature_flags:
+  proactive_delay_warnings: true
+  product_recommendations: true
+  style_suggestions: false  # Premium feature
+  size_recommendations: false  # Custom ML feature
+  voice_support: false  # Phase 2
+  video_support: false  # Phase 3
+  multilingual_support: false  # Phase 2
+  ai_powered_search: false  # Day 2
+
+# ESCALATION CONFIGURATION
+escalation:
+  human_handoff_triggers:
+    - cancellation_requests
+    - refund_requests
+    - legal_threats
+    - abusive_language
+    - unresolved_after_3_turns
+  
+  escalation_channels:
+    primary: "email"
+    secondary: "whatsapp"
+    urgent: "phone"
+  
+  escalation_message: "I'm connecting you with our support team who can help you further."
+  
+  sla:
+    response_time_minutes: 120
+    resolution_time_hours: 24
+
+# SECURITY & COMPLIANCE
+security:
+  data_encryption: true
+  pii_handling: "encrypted_at_rest"
+  gdpr_compliant: true
+  data_retention_days: 365
+  
+  allowed_operations:
+    - read_order_status
+    - read_product_info
+    - read_policies
+    - send_messages
+  
+  forbidden_operations:
+    - cancel_orders
+    - process_refunds
+    - modify_orders
+    - access_payment_info
+    - update_customer_data

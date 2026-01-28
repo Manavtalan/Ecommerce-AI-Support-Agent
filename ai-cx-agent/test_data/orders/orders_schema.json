@@ -1,0 +1,80 @@
+{
+  "schema_version": "1.0.0",
+  "last_updated": "2026-01-28",
+  "description": "Order data structure for AI Customer Experience Agent",
+  
+  "fields": {
+    "order_id": {
+      "type": "string",
+      "description": "Unique order identifier (4-6 digits)",
+      "example": "12345",
+      "required": true
+    },
+    "brand_id": {
+      "type": "string",
+      "description": "Brand identifier matching brand_config",
+      "example": "brand_fashionhub_001",
+      "required": true
+    },
+    "customer_email": {
+      "type": "string",
+      "description": "Customer email address",
+      "example": "customer@email.com",
+      "required": true
+    },
+    "customer_name": {
+      "type": "string",
+      "description": "Customer full name",
+      "example": "Priya Sharma",
+      "required": true
+    },
+    "status": {
+      "type": "enum",
+      "description": "Current order status",
+      "values": ["processing", "shipped", "delivered", "cancelled", "returned"],
+      "required": true
+    },
+    "order_date": {
+      "type": "string",
+      "format": "ISO 8601 datetime",
+      "description": "When order was placed",
+      "example": "2026-01-24T10:30:00Z",
+      "required": true
+    },
+    "items": {
+      "type": "array",
+      "description": "List of ordered products",
+      "required": true
+    },
+    "total": {
+      "type": "number",
+      "description": "Total order value in INR",
+      "example": 1499,
+      "required": true
+    },
+    "payment_method": {
+      "type": "enum",
+      "values": ["prepaid", "cod", "upi", "credit_card", "debit_card", "netbanking"],
+      "required": true
+    },
+    "shipping": {
+      "type": "object",
+      "description": "Shipping details (null if not yet shipped)",
+      "required": false
+    }
+  },
+  
+  "shipping_object_schema": {
+    "address": "string (full delivery address)",
+    "courier": "string (courier company name)",
+    "tracking_number": "string (AWB number)",
+    "tracking_url": "string (full tracking link)",
+    "shipped_date": "string (ISO 8601 datetime)",
+    "estimated_delivery": "string (YYYY-MM-DD)",
+    "delivered_date": "string (ISO 8601 datetime, if delivered)",
+    "last_update": "string (latest courier update)",
+    "current_location": "string (current package location)",
+    "delay_reason": "string (if delayed)",
+    "revised_eta": "string (if delayed)"
+  }
+}
