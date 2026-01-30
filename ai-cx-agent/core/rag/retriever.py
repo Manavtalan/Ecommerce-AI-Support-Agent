@@ -84,17 +84,17 @@ class KnowledgeRetriever:
                 ]
             )
         
-        # Search
-        results = self.qdrant_client.search(
+        # Search using query_points() - correct method for this Qdrant version
+        results = self.qdrant_client.query_points(
             collection_name=self.collection_name,
-            query_vector=query_vector,
+            query=query_vector,
             limit=top_k,
             query_filter=search_filter
         )
         
-        # Format results
+        # Format results (note: results.points not just results)
         formatted_results = []
-        for result in results:
+        for result in results.points:
             formatted_results.append({
                 "text": result.payload["text"],
                 "score": result.score,
