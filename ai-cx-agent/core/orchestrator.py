@@ -1,7 +1,7 @@
 """
 Conversation Orchestrator
-Coordinates all components for natural conversation flow
-WITH RAG INTEGRATION for policy questions
+Coordinates: Memory + Emotion + RAG + TOOLS
+NOW WITH TOOL INTEGRATION!
 """
 
 from typing import Dict, Tuple, Optional
@@ -9,16 +9,13 @@ from core.conversation.context import ConversationContext
 from core.emotion.detector import EmotionDetector
 from core.llm.composer import LLMResponseComposer
 from core.rag.retriever import KnowledgeRetriever
+from core.tools.registry import ToolRegistry
+import re
 
 
 class ConversationOrchestrator:
     """
-    Orchestrates the conversation flow by coordinating:
-    - Context management (memory)
-    - Emotion detection
-    - RAG knowledge retrieval (NEW!)
-    - Response generation
-    - State tracking
+    Orchestrates conversation with full tool integration
     """
     
     def __init__(
@@ -27,30 +24,32 @@ class ConversationOrchestrator:
         brand_voice: Optional[Dict] = None,
         system_prompt: str = "You are a helpful customer support agent."
     ):
-        """
-        Initialize the orchestrator
-        
-        Args:
-            brand_name: Brand name for RAG retrieval
-            brand_voice: Brand voice guidelines
-            system_prompt: Base system prompt
-        """
-        # Initialize components
+        """Initialize orchestrator with all components"""
+        # Core components
         self.context = ConversationContext()
         self.composer = LLMResponseComposer()
         
-        # NEW: Initialize RAG retriever
+        # RAG
         self.brand_name = brand_name
         try:
             self.retriever = KnowledgeRetriever(brand_name)
             self.rag_available = True
-            print(f"✅ RAG enabled for {brand_name}")
         except Exception as e:
             print(f"⚠️  RAG not available: {e}")
             self.retriever = None
             self.rag_available = False
         
-        # Store configuration
+        # TOOLS (NEW!)
+        try:
+            self.tools = ToolRegistry(brand_name)
+            self.tools_available = True
+            print(f"✅ Tools enabled: {self.tools.list_tools()}")
+        except Exception as e:
+            print(f"⚠️  Tools not available: {e}")
+            self.tools = None
+            self.tools_available = False
+        
+        # Configuration
         self.brand_voice = brand_voice or {}
         self.system_prompt = system_prompt
         
@@ -64,7 +63,7 @@ class ConversationOrchestrator:
             "neutral": 0
         }
         
-        # NEW: RAG statistics
+        # RAG stats
         self.rag_stats = {
             "policy_questions": 0,
             "rag_retrievals": 0,
@@ -73,18 +72,24 @@ class ConversationOrchestrator:
             "low_confidence": 0,
             "escalations": 0
         }
+        
+        # TOOL stats (NEW!)
+        self.tool_stats = {
+            "tool_calls": 0,
+            "tool_successes": 0,
+            "tool_failures": 0,
+            "order_queries": 0,
+            "knowledge_queries": 0
+        }
+    
+    def _extract_order_id(self, message: str) -> Optional[str]:
+        """Extract order ID from message"""
+        # Look for 4-5 digit numbers
+        match = re.search(r'\b(\d{4,5})\b', message)
+        return match.group(1) if match else None
     
     def _is_policy_question(self, message: str) -> bool:
-        """
-        Detect if message is a policy question
-        
-        Args:
-            message: User message
-        
-        Returns:
-            True if appears to be policy question
-        """
-        # Policy keywords
+        """Detect if message is a policy question"""
         policy_keywords = [
             "policy", "return", "refund", "exchange", "shipping",
             "delivery", "cancel", "cancellation", "free shipping",
@@ -93,32 +98,10 @@ class ConversationOrchestrator:
         ]
         
         message_lower = message.lower()
-        
-        # Check for policy keywords
-        for keyword in policy_keywords:
-            if keyword in message_lower:
-                return True
-        
-        # Check for question patterns
-        question_patterns = ["what", "how", "when", "where", "can i", "do you"]
-        starts_with_question = any(message_lower.startswith(p) for p in question_patterns)
-        
-        # No order ID mentioned (likely not order-specific)
-        import re
-        has_order_id = bool(re.search(r'\b\d{5}\b', message))
-        
-        return starts_with_question and not has_order_id
+        return any(keyword in message_lower for keyword in policy_keywords)
     
     def _retrieve_knowledge(self, query: str) -> Optional[Dict]:
-        """
-        Retrieve relevant knowledge from RAG
-        
-        Args:
-            query: User query
-        
-        Returns:
-            Knowledge retrieval result or None
-        """
+        """Retrieve from RAG"""
         if not self.rag_available:
             return None
         
@@ -126,7 +109,6 @@ class ConversationOrchestrator:
             self.rag_stats["rag_retrievals"] += 1
             result = self.retriever.retrieve_with_confidence(query)
             
-            # Update confidence stats
             if result["confidence"] == "high":
                 self.rag_stats["high_confidence"] += 1
             elif result["confidence"] == "medium":
@@ -139,55 +121,20 @@ class ConversationOrchestrator:
             
             return result
         except Exception as e:
-            print(f"⚠️  RAG retrieval error: {e}")
+            print(f"⚠️  RAG error: {e}")
             return None
     
     def _format_rag_context(self, rag_result: Dict) -> str:
-        """
-        Format RAG results for LLM context
-        
-        Args:
-            rag_result: RAG retrieval result
-        
-        Returns:
-            Formatted context string
-        """
+        """Format RAG results for LLM"""
         if not rag_result or not rag_result.get("found"):
             return ""
         
         context = "RELEVANT POLICY INFORMATION:\n\n"
-        
-        # Add retrieved chunks
         for i, result in enumerate(rag_result["results"][:3], 1):
             context += f"[Source {i}: {result['source']}]\n"
             context += f"{result['text']}\n\n"
         
-        # Add confidence note
-        confidence = rag_result["confidence"]
-        if confidence == "medium":
-            context += "Note: Use this information but consider mentioning it's based on current policies.\n"
-        
         return context
-    
-    def _format_citation(self, rag_result: Dict) -> str:
-        """
-        Format citation for response
-        
-        Args:
-            rag_result: RAG retrieval result
-        
-        Returns:
-            Citation string
-        """
-        if not rag_result or not rag_result.get("results"):
-            return ""
-        
-        sources = list(set([r["source"] for r in rag_result["results"][:3]]))
-        
-        if len(sources) == 1:
-            return f"\n\n[Source: {sources[0]}]"
-        else:
-            return f"\n\n[Sources: {', '.join(sources)}]"
     
     def process_message(
         self,
@@ -196,56 +143,72 @@ class ConversationOrchestrator:
         constraints: Optional[list] = None
     ) -> Tuple[str, Dict]:
         """
-        Process a user message and generate response
+        Process message with FULL TOOL INTEGRATION
         
         Args:
-            user_message: The user's message
-            facts: Known facts (order details, etc.)
-            constraints: What the agent cannot do
+            user_message: User's message
+            facts: Additional facts
+            constraints: Constraints
         
         Returns:
-            Tuple of (response, metadata)
+            (response, metadata)
         """
-        # Step 1: Add user message to context
+        # Step 1: Add to context
         self.context.add_user_message(user_message)
         
         # Step 2: Detect emotion
         emotion, intensity, triggers = EmotionDetector.detect_emotion(user_message)
-        
-        # Update context metadata
         self.context.update_metadata("last_emotion", emotion)
         
-        # Track emotion statistics
         if emotion in self.emotions_detected:
             self.emotions_detected[emotion] += 1
         
-        # Step 3: Check if this is a policy question
+        # Initialize facts
+        if facts is None:
+            facts = {}
+        
+        # Step 3: CHECK FOR ORDER QUERY (TOOL!)
+        order_id = self._extract_order_id(user_message)
+        tool_used = None
+        tool_result = None
+        
+        if order_id and self.tools_available:
+            print(f"🔧 Order ID detected: {order_id}, using order tool...")
+            self.tool_stats["tool_calls"] += 1
+            self.tool_stats["order_queries"] += 1
+            
+            # Use order tool
+            tool_result = self.tools.execute_tool("get_order_status", order_id=order_id)
+            tool_used = "get_order_status"
+            
+            if tool_result["success"]:
+                self.tool_stats["tool_successes"] += 1
+                # Add order data to facts
+                facts["order_data"] = tool_result["data"]
+                print(f"   ✅ Order found: {tool_result['data']['customer_name']}")
+            else:
+                self.tool_stats["tool_failures"] += 1
+                facts["order_error"] = tool_result["error"]
+                print(f"   ❌ Order tool failed: {tool_result['error']}")
+        
+        # Step 4: CHECK FOR POLICY QUESTION (RAG!)
         is_policy_q = self._is_policy_question(user_message)
         rag_result = None
         rag_context = ""
         
-        if is_policy_q and self.rag_available:
+        if is_policy_q and self.rag_available and not order_id:
             self.rag_stats["policy_questions"] += 1
             print(f"🔍 Policy question detected, retrieving from knowledge base...")
             
-            # Retrieve from RAG
             rag_result = self._retrieve_knowledge(user_message)
             
             if rag_result and rag_result.get("found"):
-                # Format RAG context for LLM
                 rag_context = self._format_rag_context(rag_result)
                 print(f"   ✅ Retrieved with {rag_result['confidence']} confidence")
+                facts["knowledge_context"] = rag_context
         
-        # Step 4: Determine scenario
-        scenario = self._determine_scenario(emotion, facts, is_policy_q)
-        
-        # Step 5: Prepare facts for composer
-        if facts is None:
-            facts = {}
-        
-        # Add RAG context to facts if available
-        if rag_context:
-            facts["knowledge_context"] = rag_context
+        # Step 5: Determine scenario
+        scenario = self._determine_scenario(emotion, facts, is_policy_q, order_id is not None)
         
         # Step 6: Generate response
         response = self.composer.compose_response(
@@ -256,65 +219,45 @@ class ConversationOrchestrator:
             brand_voice=self.brand_voice
         )
         
-        # Step 7: Add citation if RAG was used
-        if rag_result and rag_result.get("found") and rag_result["confidence"] in ["high", "medium"]:
-            citation = self._format_citation(rag_result)
-            # Note: Don't append citation to avoid cluttering response
-            # LLM will naturally incorporate the knowledge
-        
-        # Step 8: Add assistant response to context
+        # Step 7: Add to context
         self.context.add_assistant_message(response)
         
-        # Step 9: Prepare metadata
+        # Step 8: Metadata
         metadata = {
             "emotion": emotion,
             "intensity": intensity,
             "scenario": scenario,
             "is_policy_question": is_policy_q,
+            "order_id": order_id,
+            "tool_used": tool_used,
+            "tool_success": tool_result["success"] if tool_result else None,
             "rag_used": rag_result is not None,
             "rag_confidence": rag_result.get("confidence") if rag_result else None,
             "message_count": len(self.context),
             "token_usage": self.context.get_context_window_usage()
         }
         
-        # Update statistics
         self.total_messages_processed += 1
         
         return response, metadata
     
-    def _determine_scenario(self, emotion: str, facts: Optional[Dict], is_policy_q: bool) -> str:
-        """
-        Determine the appropriate scenario based on emotion and context
+    def _determine_scenario(self, emotion: str, facts: Dict, is_policy_q: bool, has_order: bool) -> str:
+        """Determine scenario"""
+        if has_order and facts.get("order_data"):
+            if emotion == "frustrated":
+                return "frustrated_customer_with_order"
+            return "order_status_query"
         
-        Args:
-            emotion: Detected emotion
-            facts: Available facts
-            is_policy_q: Whether this is a policy question
-        
-        Returns:
-            Scenario identifier
-        """
-        # Policy questions get their own scenario
         if is_policy_q:
             return "policy_question"
         
-        # If frustrated, use frustrated customer scenario
         if emotion == "frustrated":
             return "frustrated_customer"
         
-        # If has order info and is about delay
-        if facts and facts.get("status") == "delayed":
-            return "delay_explanation"
-        
-        # If has order info (standard query)
-        if facts and "order_id" in facts:
-            return "order_status_simple"
-        
-        # Default to general query
         return "general_query"
     
     def get_conversation_summary(self) -> Dict:
-        """Get summary of current conversation state"""
+        """Get conversation summary with tool stats"""
         summary = {
             "messages": len(self.context),
             "emotions_detected": self.emotions_detected,
@@ -322,62 +265,27 @@ class ConversationOrchestrator:
             "context_summary": self.context.get_conversation_summary()
         }
         
-        # Add RAG stats if available
         if self.rag_available:
             summary["rag_stats"] = self.rag_stats
         
+        if self.tools_available:
+            summary["tool_stats"] = self.tool_stats
+        
         return summary
     
-    def clear_conversation(self) -> None:
-        """Clear conversation and start fresh"""
+    def clear_conversation(self):
+        """Clear everything"""
         self.context.clear()
         self.total_messages_processed = 0
-        self.emotions_detected = {
-            "frustrated": 0,
-            "confused": 0,
-            "urgent": 0,
-            "positive": 0,
-            "neutral": 0
-        }
-        # Reset RAG stats
-        self.rag_stats = {
-            "policy_questions": 0,
-            "rag_retrievals": 0,
-            "high_confidence": 0,
-            "medium_confidence": 0,
-            "low_confidence": 0,
-            "escalations": 0
-        }
-    
-    def get_context(self) -> ConversationContext:
-        """Get the conversation context"""
-        return self.context
+        self.emotions_detected = {k: 0 for k in self.emotions_detected}
+        self.rag_stats = {k: 0 for k in self.rag_stats}
+        self.tool_stats = {k: 0 for k in self.tool_stats}
     
     def __repr__(self) -> str:
-        """String representation"""
-        rag_status = "RAG enabled" if self.rag_available else "RAG disabled"
-        return f"ConversationOrchestrator(messages={len(self.context)}, processed={self.total_messages_processed}, {rag_status})"
-
-
-# Factory function
-def create_orchestrator(
-    brand_name: str = "fashionhub",
-    brand_voice: Optional[Dict] = None,
-    system_prompt: str = "You are a helpful customer support agent."
-) -> ConversationOrchestrator:
-    """
-    Create a new conversation orchestrator
-    
-    Args:
-        brand_name: Brand name for RAG
-        brand_voice: Brand voice guidelines
-        system_prompt: System prompt
-    
-    Returns:
-        New ConversationOrchestrator instance
-    """
-    return ConversationOrchestrator(
-        brand_name=brand_name,
-        brand_voice=brand_voice,
-        system_prompt=system_prompt
-    )
+        status = []
+        if self.rag_available:
+            status.append("RAG")
+        if self.tools_available:
+            status.append("Tools")
+        
+        return f"ConversationOrchestrator(messages={len(self.context)}, {', '.join(status)})"
