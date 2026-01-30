@@ -1,6 +1,7 @@
 """
-LLM Response Composer
+LLM Response Composer - BRAND-AWARE
 Handles structured response generation with scenario-based prompting
+Now supports brand-specific system prompts
 """
 
 import os
@@ -8,7 +9,6 @@ from typing import Dict, List, Optional
 from openai import OpenAI
 from dotenv import load_dotenv
 
-# Load environment variables
 load_dotenv()
 
 
@@ -16,11 +16,11 @@ class LLMResponseComposer:
     """
     Composes natural, context-aware responses using LLM
     Prevents hallucinations by grounding responses in facts
+    NOW WITH BRAND-SPECIFIC SYSTEM PROMPTS
     """
     
     def __init__(self, model: str = "gpt-4o-mini"):
         self.model = model
-        # Initialize client here, not at module level
         self._client = None
     
     @property
@@ -39,17 +39,19 @@ class LLMResponseComposer:
         facts: Dict,
         constraints: List[str] = None,
         emotion: str = "neutral",
-        brand_voice: Optional[Dict] = None
+        brand_voice: Optional[Dict] = None,
+        system_prompt: Optional[str] = None  # NEW: Brand-specific prompt
     ) -> str:
         """
         Compose a response based on scenario and facts
         
         Args:
-            scenario: Type of response needed (order_status, delay_explanation, etc.)
-            facts: Verified facts to include (order details, tracking, etc.)
-            constraints: What agent CANNOT do (cancel orders, process refunds, etc.)
+            scenario: Type of response needed
+            facts: Verified facts to include
+            constraints: What agent CANNOT do
             emotion: Detected customer emotion
-            brand_voice: Brand voice guidelines (optional)
+            brand_voice: Brand voice guidelines (legacy, optional)
+            system_prompt: Complete brand-specific system prompt (NEW!)
         
         Returns:
             Natural, empathetic response string
@@ -58,8 +60,13 @@ class LLMResponseComposer:
         if constraints is None:
             constraints = []
         
-        # Build system prompt
-        system_prompt = self._build_system_prompt(brand_voice, constraints)
+        # Use provided system prompt OR build default
+        if system_prompt:
+            # Brand-specific prompt provided (Phase 2 feature)
+            sys_prompt = system_prompt
+        else:
+            # Build default prompt (backward compatible)
+            sys_prompt = self._build_system_prompt(brand_voice, constraints)
         
         # Build user prompt based on scenario
         user_prompt = self._build_scenario_prompt(scenario, facts, emotion)
@@ -69,7 +76,7 @@ class LLMResponseComposer:
             response = self.client.chat.completions.create(
                 model=self.model,
                 messages=[
-                    {"role": "system", "content": system_prompt},
+                    {"role": "system", "content": sys_prompt},
                     {"role": "user", "content": user_prompt}
                 ],
                 temperature=0.7,
@@ -80,7 +87,6 @@ class LLMResponseComposer:
         
         except Exception as e:
             print(f"Warning: LLM call failed: {e}")
-            # Fallback response if LLM fails
             return self._fallback_response(scenario, facts, emotion)
     
     def _build_system_prompt(
@@ -88,7 +94,7 @@ class LLMResponseComposer:
         brand_voice: Optional[Dict],
         constraints: List[str]
     ) -> str:
-        """Build system prompt with brand voice and constraints"""
+        """Build default system prompt (backward compatible)"""
         
         base_prompt = """You are a helpful customer support agent for an e-commerce brand.
 
@@ -153,6 +159,17 @@ FACTS:
 Provide the order status in a natural, friendly way. Include tracking information if available.
 """,
             
+            "order_status_query": f"""
+{emotion_context}
+
+Customer asked about their order.
+
+FACTS:
+{self._format_facts(facts)}
+
+Provide helpful information about their order status.
+""",
+            
             "delay_explanation": f"""
 {emotion_context}
 
@@ -179,6 +196,15 @@ Respond with:
 Be warm and understanding. This is critical for customer satisfaction.
 """,
             
+            "frustrated_customer_with_order": f"""
+The customer is FRUSTRATED about their order.
+
+FACTS:
+{self._format_facts(facts)}
+
+Show empathy first, then provide order details and solution.
+""",
+            
             "policy_question": f"""
 {emotion_context}
 
@@ -188,6 +214,17 @@ POLICY INFORMATION:
 {self._format_facts(facts)}
 
 Explain the policy in simple, customer-friendly terms. Be helpful.
+""",
+            
+            "shipping_inquiry": f"""
+{emotion_context}
+
+Customer asked about shipping.
+
+SHIPPING INFORMATION:
+{self._format_facts(facts)}
+
+Provide clear shipping information.
 """,
             
             "general_query": f"""
@@ -207,8 +244,20 @@ Provide a helpful, natural response. If you don't have enough information, ask f
     def _format_facts(self, facts: Dict) -> str:
         """Format facts dictionary into readable text"""
         formatted = []
+        
+        # Handle nested structures
         for key, value in facts.items():
-            formatted.append(f"- {key}: {value}")
+            if key in ["order_data", "knowledge_data", "shipping_data", "product_data"]:
+                # Nested data structures
+                if isinstance(value, dict):
+                    formatted.append(f"\n{key.upper()}:")
+                    for sub_key, sub_value in value.items():
+                        if isinstance(sub_value, (str, int, float, bool)):
+                            formatted.append(f"  - {sub_key}: {sub_value}")
+            else:
+                # Simple key-value
+                formatted.append(f"- {key}: {value}")
+        
         return "\n".join(formatted) if formatted else "No specific facts provided"
     
     def _fallback_response(
