@@ -55,3 +55,43 @@ __pycache__/
 
 # Qdrant data
 qdrant_storage/
+
+# Backup files
+*.bak
+*.backup
+*~
+
+# Legacy code (if regenerated)
+legacy/
+
+# Test outputs
+test_output/
+*.test.log
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Backup files
+*.bak
+*.backup
+*~
+
+# Legacy
+legacy/
+
+# Test outputs
+test_output/
+*.test.log
+
+# Backup files
+*.bak
+*.backup
+*~
+
+# Legacy
+legacy/
+
+# Tests
+test_output/
+*.test.log
