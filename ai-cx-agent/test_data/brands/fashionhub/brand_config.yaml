@@ -1,140 +1,66 @@
-# BRAND IDENTITY
-brand_id: brand_fashionhub_001
-name: FashionHub
-domain: fashionhub.com
-industry: fashion
-tagline: "Style Meets Service"
-description: "Trendy fashion for young professionals and fashion-forward individuals"
+brand_id: "fashionhub"
+name: "FashionHub"
+industry: "fashion"
+domain: "fashionhub.com"
+active: true
 
-# CONTACT INFORMATION
-contact:
-  email: support@fashionhub.com
-  phone: "+91-9876543210"
-  whatsapp: "+91-9876543210"
-  business_hours: "Mon-Sat 9AM-7PM IST"
-  support_languages:
-    - English
-    - Hindi
-    - Hinglish
-
-# BUSINESS POLICIES
-policies:
+# Brand Voice Configuration
+voice:
+  tone: "friendly_professional"
+  formality: "casual"
+  emoji_usage: "moderate"  # none, minimal, moderate, frequent
   
-  # Return Policy
-  returns:
-    window_days: 30
-    eligible_categories:
-      - damaged_product
-      - wrong_item_received
-      - size_issue
-      - color_mismatch
-      - defective_product
-      - quality_issue
-    non_returnable_categories:
-      - innerwear
-      - swimwear
-      - custom_tailored_items
-      - sale_items_final
-      - accessories_opened
-    return_shipping: "Free return pickup for damaged/wrong items"
-    exchange_preferred: true
-    
-  # Shipping Policy
-  shipping:
-    free_shipping_threshold: 999
-    standard_shipping_charge: 99
-    express_shipping_available: true
-    express_shipping_charge: 199
-    cod_available: true
-    cod_charges: 49
-    cod_max_amount: 15000
-    delivery_timelines:
-      metro_cities: "3-5 business days"
-      tier2_cities: "5-7 business days"
-      tier3_remote: "7-10 business days"
-    courier_partners:
-      - Delhivery
-      - BlueDart
-      - FedEx
-      - Ecom Express
-    
-  # Refund Policy
-  refunds:
-    refund_timeline_days: 7
-    refund_method: "Original payment method"
-    shipping_refund_conditions:
-      damaged_product: true
-      wrong_item: true
-      defective_product: true
-      customer_preference: false
-    processing_time: "5-7 business days after product receipt"
-    
-  # Cancellation Policy
-  cancellation:
-    before_shipping: "Free cancellation anytime"
-    after_shipping: "Not allowed - use return process instead"
-    refund_timeline: "Immediate for pre-shipping cancellations"
-    partial_cancellation: true
-    
-  # Exchange Policy
-  exchanges:
-    enabled: true
-    exchange_window_days: 30
-    same_price_exchange: "Free exchange"
-    different_price_exchange: "Pay/refund difference"
-    exchange_approval_time: "Same day if requested within 48 hours of delivery"
-    size_color_only: false
-    style_exchange_allowed: true
+  # Phrases the brand likes to use
+  signature_phrases:
+    - "We're here to help!"
+    - "Let's get this sorted for you"
+    - "Thanks for shopping with us"
+    - "We appreciate your patience"
+  
+  # Phrases to avoid
+  forbidden_phrases:
+    - "Unfortunately"
+    - "I'm afraid"
+    - "No problem"
+    - "Sorry for the inconvenience"
+  
+  # Emoji preferences
+  emoji_preferences:
+    greeting: "😊"
+    positive: "🎉"
+    shipping: "📦"
+    help: "💜"
 
-# OPERATING CONSTRAINTS
-constraints:
-  min_order_value: 299
-  max_order_value_cod: 15000
+# Policy Configuration
+policies:
+  return_window_days: 30
+  return_window_winter: 45  # Extended for winter collection
+  free_shipping_threshold: 1500
+  cod_available: true
   international_shipping: false
-  gift_wrapping_available: true
-  gift_wrapping_charge: 99
-  bulk_order_minimum: 5
-  bulk_discount_available: true
+  
+# Integration Settings
+integrations:
+  shopify:
+    enabled: true
+    store_url: "fashionhub-dev.myshopify.com"
+  
+  whatsapp:
+    enabled: false
+    business_number: ""
+  
+  email:
+    enabled: false
+    smtp_host: ""
 
-# SEASONAL & PROMOTIONAL
-seasonal_info:
-  current_season: "Winter Collection 2026"
-  sale_active: false
-  active_promotions:
-    - code: "FIRST999"
-      description: "Free shipping on first order"
-      min_order: 999
-      valid_for: "new_customers"
-    - code: "WINTER25"
-      description: "25% off winter collection"
-      valid_until: "2026-02-28"
-  special_notes:
-    - "All winter items have extended return period (45 days)"
-    - "Premium quality check on all orders before dispatch"
+# Business Hours
+business_hours:
+  timezone: "Asia/Kolkata"
+  support_hours: "9 AM - 6 PM IST"
+  days: "Monday - Saturday"
 
-# BRAND VALUES (for messaging)
-brand_values:
-  - sustainable_fashion
-  - quality_first
-  - customer_centric
-  - trend_forward
-  - inclusive_sizing
-
-# SOCIAL MEDIA
-social_media:
-  instagram: "@fashionhub.in"
-  facebook: "FashionHubIndia"
-  youtube: "FashionHubOfficial"
-
-# ADDITIONAL INFO
-additional_info:
-  founded_year: 2019
-  headquarters: "Mumbai, India"
-  total_products: 500+
-  categories:
-    - Women's Wear
-    - Men's Wear
-    - Accessories
-    - Footwear
-  size_range: "XS to 4XL"
-  sustainability: "Sourcing from sustainable manufacturers since 2022"
+# Metadata
+metadata:
+  created_at: "2024-01-20"
+  primary_contact: "support@fashionhub.com"
+  target_audience: "Young professionals, 25-35"

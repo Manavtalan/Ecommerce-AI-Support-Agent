@@ -1,0 +1,57 @@
+brand_id: "techgear"
+name: "TechGear"
+industry: "technology"
+domain: "techgear.com"
+active: true
+
+# Brand Voice Configuration
+voice:
+  tone: "professional_technical"
+  formality: "formal"
+  emoji_usage: "none"  # No emojis for professional brand
+  
+  signature_phrases:
+    - "I'll assist you with that"
+    - "Here's what I found"
+    - "Let me provide you with the information"
+    - "I can help you resolve this"
+  
+  forbidden_phrases:
+    - "Hey"
+    - "Awesome"
+    - "Cool"
+    - "No worries"
+  
+  emoji_preferences: {}  # No emojis
+
+# Policy Configuration
+policies:
+  return_window_days: 15  # Shorter return window for tech
+  free_shipping_threshold: 2500
+  cod_available: false  # Only prepaid
+  international_shipping: true
+  warranty_period_months: 12
+
+# Integration Settings
+integrations:
+  shopify:
+    enabled: true
+    store_url: "techgear-dev.myshopify.com"
+  
+  whatsapp:
+    enabled: false
+  
+  email:
+    enabled: false
+
+# Business Hours
+business_hours:
+  timezone: "Asia/Kolkata"
+  support_hours: "10 AM - 7 PM IST"
+  days: "Monday - Sunday"
+
+# Metadata
+metadata:
+  created_at: "2024-01-20"
+  primary_contact: "support@techgear.com"
+  target_audience: "Tech professionals, developers"

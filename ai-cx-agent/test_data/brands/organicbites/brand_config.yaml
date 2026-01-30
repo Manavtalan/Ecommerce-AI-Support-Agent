@@ -1,0 +1,62 @@
+brand_id: "organicbites"
+name: "OrganicBites"
+industry: "food_health"
+domain: "organicbites.com"
+active: true
+
+# Brand Voice Configuration
+voice:
+  tone: "warm_health_focused"
+  formality: "casual_warm"
+  emoji_usage: "frequent"  # Health and nature emojis
+  
+  signature_phrases:
+    - "We care about your wellness"
+    - "Fresh and healthy, just for you"
+    - "Nourishing you naturally"
+    - "Your health is our priority"
+  
+  forbidden_phrases:
+    - "Junk"
+    - "Processed"
+    - "Artificial"
+    - "Chemical"
+  
+  emoji_preferences:
+    greeting: "🌱"
+    positive: "💚"
+    shipping: "🚚"
+    help: "🌿"
+    food: "🥗"
+
+# Policy Configuration
+policies:
+  return_window_days: 7  # Shorter for perishables
+  free_shipping_threshold: 999
+  cod_available: true
+  international_shipping: false
+  freshness_guarantee: true
+
+# Integration Settings
+integrations:
+  shopify:
+    enabled: true
+    store_url: "organicbites-dev.myshopify.com"
+  
+  whatsapp:
+    enabled: false
+  
+  email:
+    enabled: false
+
+# Business Hours
+business_hours:
+  timezone: "Asia/Kolkata"
+  support_hours: "8 AM - 8 PM IST"
+  days: "Monday - Sunday"
+
+# Metadata
+metadata:
+  created_at: "2024-01-20"
+  primary_contact: "care@organicbites.com"
+  target_audience: "Health-conscious consumers"
