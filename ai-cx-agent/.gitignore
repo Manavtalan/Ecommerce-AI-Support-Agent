@@ -32,3 +32,26 @@ logs/
 .DS_Store
 Thumbs.db
 qdrant_storage/
+
+# Environment files (NEVER commit!)
+.env
+.env.*
+*.env
+.env.bak
+.env.backup
+
+# Backup files  
+*.bak
+*.backup
+*~
+
+# Mac
+.DS_Store
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+
+# Qdrant data
+qdrant_storage/
