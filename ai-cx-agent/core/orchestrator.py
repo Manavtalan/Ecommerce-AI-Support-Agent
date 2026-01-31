@@ -1,9 +1,10 @@
 """
-Conversation Orchestrator - WITH CONTEXT RESOLUTION (FIXED!)
-Coordinates: Memory + Emotion + RAG + Tools + Brand Voice + Context Resolution
+Conversation Orchestrator - WITH ESCALATION MANAGEMENT
+Coordinates: Memory + Emotion + RAG + Tools + Brand Voice + Context + Escalation
 """
 
 from typing import Dict, Tuple, Optional
+from datetime import datetime
 from core.conversation.context import ConversationContext
 from core.emotion.detector import EmotionDetector
 from core.llm.composer import LLMResponseComposer
@@ -12,11 +13,12 @@ from core.tools.registry import ToolRegistry
 from core.brands.prompt_builder import build_system_prompt
 from core.brands.registry import get_brand_registry
 from core.conversation.context_resolver import ContextResolver
+from core.conversation.escalation_manager import EscalationManager
 import re
 
 
 class ConversationOrchestrator:
-    """Orchestrates conversation with INTELLIGENT CONTEXT RESOLUTION"""
+    """Orchestrates conversation with context resolution AND escalation management"""
     
     def __init__(
         self,
@@ -24,7 +26,7 @@ class ConversationOrchestrator:
         brand_voice: Optional[Dict] = None,
         system_prompt: Optional[str] = None
     ):
-        """Initialize orchestrator with brand and context resolution"""
+        """Initialize orchestrator"""
         
         # Validate brand
         registry = get_brand_registry()
@@ -38,9 +40,12 @@ class ConversationOrchestrator:
         self.context = ConversationContext()
         self.composer = LLMResponseComposer()
         
-        # Context resolution
+        # Intelligence components
         self.context_resolver = ContextResolver(self.composer.client)
+        self.escalation_manager = EscalationManager()
+        
         self.active_topic = None
+        self.emotion_history = []
         
         # Build brand-specific system prompt
         if system_prompt:
@@ -82,6 +87,12 @@ class ConversationOrchestrator:
             "context_maintained": 0,
             "topic_switches": 0
         }
+        self.escalation_stats = {
+            "escalations_triggered": 0,
+            "escalations_prevented": 0,
+            "tier1_escalations": 0,
+            "tier2_escalations": 0
+        }
     
     def process_message(
         self,
@@ -89,7 +100,7 @@ class ConversationOrchestrator:
         facts: Optional[Dict] = None,
         constraints: Optional[list] = None
     ) -> Tuple[str, Dict]:
-        """Process message with intelligent context resolution"""
+        """Process message with context resolution AND escalation management"""
         
         # Add to context
         self.context.add_user_message(user_message)
@@ -101,12 +112,51 @@ class ConversationOrchestrator:
         if emotion in self.emotions_detected:
             self.emotions_detected[emotion] += 1
         
+        # Track emotion history
+        self.emotion_history.append({
+            'emotion': emotion,
+            'intensity': intensity,
+            'timestamp': datetime.now().isoformat()
+        })
+        
+        # Keep only last 10 emotions
+        if len(self.emotion_history) > 10:
+            self.emotion_history = self.emotion_history[-10:]
+        
         if facts is None:
             facts = {}
         
         # Add brand context
         facts["brand_name"] = self.brand_config.get("name")
         facts["brand_voice"] = self.brand_config.get("voice", {})
+        
+        # === ESCALATION CHECK ===
+        escalation_check = self.escalation_manager.should_escalate({
+            'message': user_message,
+            'emotion': emotion,
+            'emotion_history': self.emotion_history,
+            'confidence': 1.0,
+            'scenario': '',
+            'tool_failures': self.tool_stats.get('tool_failures', 0)
+        })
+        
+        if escalation_check['should_escalate']:
+            print(f"🚨 ESCALATION: Tier {escalation_check['escalation_tier']} - {escalation_check['reason']}")
+            
+            self.escalation_stats["escalations_triggered"] += 1
+            
+            if escalation_check['escalation_tier'] == 1:
+                self.escalation_stats["tier1_escalations"] += 1
+            elif escalation_check['escalation_tier'] == 2:
+                self.escalation_stats["tier2_escalations"] += 1
+            
+            facts['escalation'] = escalation_check
+            self.escalation_manager.log_escalation(escalation_check)
+        
+        elif escalation_check.get('prevent_escalation'):
+            print(f"💚 Escalation prevented: Empathy first")
+            self.escalation_stats["escalations_prevented"] += 1
+            facts['empathy_needed'] = True
         
         # === CONTEXT RESOLUTION ===
         if self.active_topic:
@@ -118,15 +168,13 @@ class ConversationOrchestrator:
             self.context_stats["context_resolutions"] += 1
             
             if context_result['about_current_topic'] and context_result['confidence'] > 0.7:
-                # Message is about current topic!
                 print(f"💡 Context resolved: '{user_message}' → {self.active_topic['topic_type']} {self.active_topic['entity_id']}")
                 
                 facts['active_topic'] = self.active_topic
                 facts['context_confidence'] = context_result['confidence']
                 self.context_stats["context_maintained"] += 1
             else:
-                # New topic or low confidence
-                print(f"🔄 New topic detected, clearing active context")
+                print(f"🔄 New topic detected")
                 self.active_topic = None
                 self.context_stats["topic_switches"] += 1
         
@@ -135,7 +183,7 @@ class ConversationOrchestrator:
         tool_result = None
         tool_success = False
         
-        if self.tools_available:
+        if self.tools_available and not facts.get('escalation'):  # Skip tools if escalating
             selected_tool = self.tools.select_tool(user_message)
             
             if selected_tool:
@@ -145,7 +193,7 @@ class ConversationOrchestrator:
                 tool_params = self._extract_tool_params(user_message, selected_tool)
                 
                 if tool_params:
-                    # === FIX: SET TOPIC WHEN TOOL SELECTED (not just on success!) ===
+                    # Set topic when tool selected
                     if selected_tool == "get_order_status" and tool_params.get('order_id'):
                         self.active_topic = {
                             'topic_type': 'ORDER',
@@ -188,7 +236,10 @@ class ConversationOrchestrator:
                         facts["tool_error"] = tool_result["error"]
         
         # Determine scenario
-        scenario = self._determine_scenario(emotion, facts, tool_used)
+        if facts.get('escalation'):
+            scenario = 'escalation_needed'
+        else:
+            scenario = self._determine_scenario(emotion, facts, tool_used)
         
         # Generate response
         response = self.composer.compose_response(
@@ -199,6 +250,10 @@ class ConversationOrchestrator:
             brand_voice=self.brand_config.get("voice", {}),
             system_prompt=self.system_prompt
         )
+        
+        # If escalation suggested message exists, use it
+        if facts.get('escalation') and facts['escalation'].get('suggested_message'):
+            response = facts['escalation']['suggested_message']
         
         # Add to context
         self.context.add_assistant_message(response)
@@ -214,6 +269,7 @@ class ConversationOrchestrator:
             "tool_success": tool_success,
             "active_topic": self.active_topic,
             "context_maintained": bool(self.active_topic and facts.get('context_confidence')),
+            "escalation": facts.get('escalation'),
             "message_count": len(self.context),
             "token_usage": self.context.get_context_window_usage()
         }
@@ -277,6 +333,7 @@ class ConversationOrchestrator:
             "total_processed": self.total_messages_processed,
             "tool_stats": self.tool_stats,
             "context_stats": self.context_stats,
+            "escalation_stats": self.escalation_stats,
             "active_topic": self.active_topic,
             "context_summary": self.context.get_conversation_summary()
         }
@@ -285,10 +342,12 @@ class ConversationOrchestrator:
         """Clear everything"""
         self.context.clear()
         self.active_topic = None
+        self.emotion_history = []
         self.total_messages_processed = 0
         self.emotions_detected = {k: 0 for k in self.emotions_detected}
         self.tool_stats = {k: 0 for k in self.tool_stats}
         self.context_stats = {k: 0 for k in self.context_stats}
+        self.escalation_stats = {k: 0 for k in self.escalation_stats}
     
     def __repr__(self) -> str:
         topic_info = f", topic={self.active_topic['topic_type']}" if self.active_topic else ""
