@@ -40,7 +40,7 @@ class LLMResponseComposer:
         constraints: List[str] = None,
         emotion: str = "neutral",
         brand_voice: Optional[Dict] = None,
-        system_prompt: Optional[str] = None  # NEW: Brand-specific prompt
+        system_prompt: Optional[str] = None  # BRAND-SPECIFIC PROMPT
     ) -> str:
         """
         Compose a response based on scenario and facts
