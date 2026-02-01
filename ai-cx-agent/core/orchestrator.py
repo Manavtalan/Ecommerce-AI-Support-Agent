@@ -1,6 +1,6 @@
 """
-Conversation Orchestrator - WITH ESCALATION MANAGEMENT
-Coordinates: Memory + Emotion + RAG + Tools + Brand Voice + Context + Escalation
+Conversation Orchestrator - WITH QUALITY MONITORING
+Coordinates: Memory + Emotion + RAG + Tools + Brand Voice + Context + Escalation + Quality
 """
 
 from typing import Dict, Tuple, Optional
@@ -14,11 +14,12 @@ from core.brands.prompt_builder import build_system_prompt
 from core.brands.registry import get_brand_registry
 from core.conversation.context_resolver import ContextResolver
 from core.conversation.escalation_manager import EscalationManager
+from core.conversation.quality_scorer import ConversationQualityScorer
 import re
 
 
 class ConversationOrchestrator:
-    """Orchestrates conversation with context resolution AND escalation management"""
+    """Orchestrates conversation with full intelligence stack + quality monitoring"""
     
     def __init__(
         self,
@@ -26,7 +27,7 @@ class ConversationOrchestrator:
         brand_voice: Optional[Dict] = None,
         system_prompt: Optional[str] = None
     ):
-        """Initialize orchestrator"""
+        """Initialize orchestrator with all intelligence components"""
         
         # Validate brand
         registry = get_brand_registry()
@@ -43,9 +44,11 @@ class ConversationOrchestrator:
         # Intelligence components
         self.context_resolver = ContextResolver(self.composer.client)
         self.escalation_manager = EscalationManager()
+        self.quality_scorer = ConversationQualityScorer()
         
         self.active_topic = None
         self.emotion_history = []
+        self.quality_history = []
         
         # Build brand-specific system prompt
         if system_prompt:
@@ -93,6 +96,14 @@ class ConversationOrchestrator:
             "tier1_escalations": 0,
             "tier2_escalations": 0
         }
+        self.quality_stats = {
+            "avg_overall": 0.0,
+            "avg_context": 0.0,
+            "avg_empathy": 0.0,
+            "avg_accuracy": 0.0,
+            "avg_efficiency": 0.0,
+            "avg_brand_voice": 0.0
+        }
     
     def process_message(
         self,
@@ -100,7 +111,7 @@ class ConversationOrchestrator:
         facts: Optional[Dict] = None,
         constraints: Optional[list] = None
     ) -> Tuple[str, Dict]:
-        """Process message with context resolution AND escalation management"""
+        """Process message with full intelligence + quality scoring"""
         
         # Add to context
         self.context.add_user_message(user_message)
@@ -119,7 +130,6 @@ class ConversationOrchestrator:
             'timestamp': datetime.now().isoformat()
         })
         
-        # Keep only last 10 emotions
         if len(self.emotion_history) > 10:
             self.emotion_history = self.emotion_history[-10:]
         
@@ -183,7 +193,7 @@ class ConversationOrchestrator:
         tool_result = None
         tool_success = False
         
-        if self.tools_available and not facts.get('escalation'):  # Skip tools if escalating
+        if self.tools_available and not facts.get('escalation'):
             selected_tool = self.tools.select_tool(user_message)
             
             if selected_tool:
@@ -258,6 +268,46 @@ class ConversationOrchestrator:
         # Add to context
         self.context.add_assistant_message(response)
         
+        # === QUALITY SCORING ===
+        quality_score = self.quality_scorer.score_exchange({
+            'user_message': user_message,
+            'agent_response': response,
+            'emotion': emotion,
+            'scenario': scenario,
+            'context_used': bool(self.active_topic and facts.get('context_confidence')),
+            'tool_results': tool_result or {},
+            'metadata': {
+                'tool_used': tool_used,
+                'tool_success': tool_success,
+                'active_topic': self.active_topic,
+                'escalation': facts.get('escalation')
+            },
+            'brand_config': self.brand_config
+        })
+        
+        self.quality_history.append(quality_score)
+        
+        # Update quality stats
+        avg_scores = self.quality_scorer.get_average_scores()
+        self.quality_stats = {
+            'avg_overall': avg_scores['overall'],
+            'avg_context': avg_scores['context_retention'],
+            'avg_empathy': avg_scores['empathy'],
+            'avg_accuracy': avg_scores['accuracy'],
+            'avg_efficiency': avg_scores['efficiency'],
+            'avg_brand_voice': avg_scores['brand_voice']
+        }
+        
+        # Show quality score
+        if quality_score['overall'] >= 8.0:
+            print(f"⭐ Quality: {quality_score['overall']}/10 ({quality_score['grade']}) - Excellent!")
+        elif quality_score['overall'] >= 7.0:
+            print(f"✓ Quality: {quality_score['overall']}/10 ({quality_score['grade']}) - Good")
+        else:
+            print(f"⚠️  Quality: {quality_score['overall']}/10 ({quality_score['grade']}) - Needs improvement")
+            if quality_score.get('suggestions'):
+                print(f"   Suggestions: {quality_score['suggestions'][0]}")
+        
         # Metadata
         metadata = {
             "brand_id": self.brand_id,
@@ -270,6 +320,7 @@ class ConversationOrchestrator:
             "active_topic": self.active_topic,
             "context_maintained": bool(self.active_topic and facts.get('context_confidence')),
             "escalation": facts.get('escalation'),
+            "quality_score": quality_score,
             "message_count": len(self.context),
             "token_usage": self.context.get_context_window_usage()
         }
@@ -324,7 +375,7 @@ class ConversationOrchestrator:
         return "general_query"
     
     def get_conversation_summary(self) -> Dict:
-        """Get conversation summary"""
+        """Get comprehensive conversation summary"""
         return {
             "brand_id": self.brand_id,
             "brand_name": self.brand_config.get("name"),
@@ -334,6 +385,7 @@ class ConversationOrchestrator:
             "tool_stats": self.tool_stats,
             "context_stats": self.context_stats,
             "escalation_stats": self.escalation_stats,
+            "quality_stats": self.quality_stats,
             "active_topic": self.active_topic,
             "context_summary": self.context.get_conversation_summary()
         }
@@ -343,12 +395,15 @@ class ConversationOrchestrator:
         self.context.clear()
         self.active_topic = None
         self.emotion_history = []
+        self.quality_history = []
         self.total_messages_processed = 0
         self.emotions_detected = {k: 0 for k in self.emotions_detected}
         self.tool_stats = {k: 0 for k in self.tool_stats}
         self.context_stats = {k: 0 for k in self.context_stats}
         self.escalation_stats = {k: 0 for k in self.escalation_stats}
+        self.quality_stats = {k: 0.0 for k in self.quality_stats}
     
     def __repr__(self) -> str:
         topic_info = f", topic={self.active_topic['topic_type']}" if self.active_topic else ""
-        return f"ConversationOrchestrator(brand={self.brand_id}, messages={len(self.context)}{topic_info})"
+        quality_info = f", quality={self.quality_stats.get('avg_overall', 0.0):.1f}"
+        return f"ConversationOrchestrator(brand={self.brand_id}, messages={len(self.context)}{topic_info}{quality_info})"
