@@ -1,264 +1,192 @@
 """
-LLM Response Composer - BRAND-AWARE
-Handles structured response generation with scenario-based prompting
-Now supports brand-specific system prompts
+LLM Response Composer - WITH RETRY LOGIC
+Generates contextual responses with exponential backoff
 """
 
-import os
 from typing import Dict, List, Optional
 from openai import OpenAI
+import os
+import time
 from dotenv import load_dotenv
 
 load_dotenv()
 
 
 class LLMResponseComposer:
-    """
-    Composes natural, context-aware responses using LLM
-    Prevents hallucinations by grounding responses in facts
-    NOW WITH BRAND-SPECIFIC SYSTEM PROMPTS
-    """
+    """Composes LLM responses with intelligent retry logic"""
     
     def __init__(self, model: str = "gpt-4o-mini"):
+        """Initialize composer with retry capability"""
+        self.client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
         self.model = model
-        self._client = None
-    
-    @property
-    def client(self):
-        """Lazy initialization of OpenAI client"""
-        if self._client is None:
-            api_key = os.getenv("OPENAI_API_KEY")
-            if not api_key:
-                raise ValueError("OPENAI_API_KEY not found in environment")
-            self._client = OpenAI(api_key=api_key)
-        return self._client
+        self.retry_stats = {
+            'total_calls': 0,
+            'successful_calls': 0,
+            'failed_calls': 0,
+            'retries': 0
+        }
     
     def compose_response(
         self,
         scenario: str,
         facts: Dict,
-        constraints: List[str] = None,
+        constraints: List[str],
         emotion: str = "neutral",
         brand_voice: Optional[Dict] = None,
-        system_prompt: Optional[str] = None  # BRAND-SPECIFIC PROMPT
+        system_prompt: Optional[str] = None,
+        max_retries: int = 2
     ) -> str:
         """
-        Compose a response based on scenario and facts
+        Compose response with retry logic and exponential backoff
         
         Args:
-            scenario: Type of response needed
-            facts: Verified facts to include
-            constraints: What agent CANNOT do
-            emotion: Detected customer emotion
-            brand_voice: Brand voice guidelines (legacy, optional)
-            system_prompt: Complete brand-specific system prompt (NEW!)
+            scenario: Type of scenario
+            facts: Context and facts
+            constraints: Response constraints
+            emotion: Detected emotion
+            brand_voice: Brand voice configuration
+            system_prompt: Custom system prompt
+            max_retries: Maximum retry attempts (default: 2)
         
         Returns:
-            Natural, empathetic response string
+            Generated response string
         """
+        self.retry_stats['total_calls'] += 1
         
-        if constraints is None:
-            constraints = []
+        retries = 0
+        backoff = 1.0  # Start with 1 second
         
-        # Use provided system prompt OR build default
-        if system_prompt:
-            # Brand-specific prompt provided (Phase 2 feature)
-            sys_prompt = system_prompt
-        else:
-            # Build default prompt (backward compatible)
-            sys_prompt = self._build_system_prompt(brand_voice, constraints)
-        
-        # Build user prompt based on scenario
-        user_prompt = self._build_scenario_prompt(scenario, facts, emotion)
-        
-        # Call LLM
-        try:
-            response = self.client.chat.completions.create(
-                model=self.model,
-                messages=[
-                    {"role": "system", "content": sys_prompt},
-                    {"role": "user", "content": user_prompt}
-                ],
-                temperature=0.7,
-                max_tokens=500
-            )
+        while retries <= max_retries:
+            try:
+                # Build prompt
+                user_prompt = self._build_prompt(scenario, facts, constraints, emotion)
+                
+                # Use custom system prompt or build default
+                if system_prompt:
+                    sys_prompt = system_prompt
+                else:
+                    sys_prompt = self._build_system_prompt(brand_voice, constraints)
+                
+                # Call LLM
+                response = self.client.chat.completions.create(
+                    model=self.model,
+                    messages=[
+                        {"role": "system", "content": sys_prompt},
+                        {"role": "user", "content": user_prompt}
+                    ],
+                    temperature=0.7,
+                    max_tokens=500
+                )
+                
+                # Success!
+                self.retry_stats['successful_calls'] += 1
+                if retries > 0:
+                    print(f"   ✅ Retry successful after {retries} attempt(s)")
+                
+                return response.choices[0].message.content.strip()
             
-            return response.choices[0].message.content.strip()
+            except Exception as e:
+                error_type = type(e).__name__
+                retries += 1
+                
+                # Check if error is retryable
+                retryable_errors = [
+                    'RateLimitError',
+                    'APITimeoutError', 
+                    'APIConnectionError',
+                    'InternalServerError',
+                    'Timeout'
+                ]
+                
+                is_retryable = any(err in error_type for err in retryable_errors)
+                
+                if retries > max_retries or not is_retryable:
+                    # Max retries reached or non-retryable error
+                    print(f"Warning: LLM call failed: {e}")
+                    self.retry_stats['failed_calls'] += 1
+                    
+                    # Use fallback
+                    return self._fallback_response(scenario, facts, emotion)
+                
+                # Wait with exponential backoff
+                print(f"   ⏳ LLM error ({error_type}), retrying in {backoff}s... (attempt {retries}/{max_retries})")
+                time.sleep(backoff)
+                backoff *= 2  # Exponential backoff: 1s, 2s, 4s
+                
+                self.retry_stats['retries'] += 1
         
-        except Exception as e:
-            print(f"Warning: LLM call failed: {e}")
-            return self._fallback_response(scenario, facts, emotion)
+        # Should not reach here, but fallback just in case
+        self.retry_stats['failed_calls'] += 1
+        return self._fallback_response(scenario, facts, emotion)
+    
+    def _build_prompt(
+        self,
+        scenario: str,
+        facts: Dict,
+        constraints: List[str],
+        emotion: str
+    ) -> str:
+        """Build user prompt"""
+        
+        prompt_parts = [f"Scenario: {scenario}"]
+        
+        # Add emotion context
+        if emotion != "neutral":
+            prompt_parts.append(f"Customer emotion: {emotion}")
+        
+        # Add facts
+        if facts.get("order_data"):
+            order = facts["order_data"]
+            prompt_parts.append(f"Order: {order.get('order_id', 'N/A')} - Status: {order.get('status', 'unknown')}")
+        
+        if facts.get("knowledge_data"):
+            knowledge = facts["knowledge_data"]
+            if isinstance(knowledge, list) and knowledge:
+                prompt_parts.append(f"Relevant info: {knowledge[0][:200]}")
+        
+        if facts.get("active_topic"):
+            topic = facts["active_topic"]
+            prompt_parts.append(f"Context: {topic.get('topic_type')} {topic.get('entity_id')}")
+        
+        if facts.get("escalation"):
+            esc = facts["escalation"]
+            prompt_parts.append(f"ESCALATION NEEDED: {esc.get('reason')}")
+        
+        if facts.get("empathy_needed"):
+            prompt_parts.append("Show empathy before addressing issue")
+        
+        # Add constraints
+        if constraints:
+            prompt_parts.append(f"Constraints: {', '.join(constraints)}")
+        
+        return "\n".join(prompt_parts)
     
     def _build_system_prompt(
         self,
         brand_voice: Optional[Dict],
         constraints: List[str]
     ) -> str:
-        """Build default system prompt (backward compatible)"""
+        """Build system prompt from brand voice"""
         
-        base_prompt = """You are a helpful customer support agent for an e-commerce brand.
-
-Your communication style:
-- Friendly and professional
-- Empathetic and understanding
-- Clear and concise
-- Natural, not robotic
-
-CRITICAL RULES:
-- ONLY use information provided in the facts
-- NEVER make up order numbers, dates, or tracking information
-- If information is missing, acknowledge it
-- Be honest about what you can and cannot do
-"""
+        base = "You are a helpful customer support agent."
         
-        # Add brand voice if provided
         if brand_voice:
-            tone = brand_voice.get('tone', 'friendly_professional')
-            formality = brand_voice.get('formality', 'casual')
-            base_prompt += f"\n\nBrand Voice: {tone}, {formality} formality\n"
+            tone = brand_voice.get('tone', 'professional')
+            emoji = brand_voice.get('emoji_usage', 'moderate')
             
-            if 'forbidden_phrases' in brand_voice:
-                forbidden = ", ".join(brand_voice['forbidden_phrases'][:3])
-                base_prompt += f"Never use phrases like: {forbidden}\n"
+            base += f" Tone: {tone}."
+            
+            if emoji == 'frequent':
+                base += " Use emojis frequently to be friendly."
+            elif emoji == 'moderate':
+                base += " Use emojis moderately."
+            elif emoji == 'none':
+                base += " Do not use emojis."
         
-        # Add constraints
         if constraints:
-            base_prompt += "\n\nYou CANNOT:\n"
-            for constraint in constraints:
-                base_prompt += f"- {constraint}\n"
+            base += f" Constraints: {', '.join(constraints)}."
         
-        return base_prompt
-    
-    def _build_scenario_prompt(
-        self,
-        scenario: str,
-        facts: Dict,
-        emotion: str
-    ) -> str:
-        """Build scenario-specific prompt with facts"""
-        
-        # Emotion context
-        emotion_context = ""
-        if emotion == "frustrated":
-            emotion_context = "The customer is frustrated. Show empathy FIRST, then provide solution."
-        elif emotion == "confused":
-            emotion_context = "The customer seems confused. Use simple, clear language."
-        elif emotion == "urgent":
-            emotion_context = "The customer needs urgent help. Be direct and action-oriented."
-        
-        # Scenario templates
-        scenarios = {
-            "order_status_simple": f"""
-{emotion_context}
-
-Customer asked about their order status.
-
-FACTS:
-{self._format_facts(facts)}
-
-Provide the order status in a natural, friendly way. Include tracking information if available.
-""",
-            
-            "order_status_query": f"""
-{emotion_context}
-
-Customer asked about their order.
-
-FACTS:
-{self._format_facts(facts)}
-
-Provide helpful information about their order status.
-""",
-            
-            "delay_explanation": f"""
-{emotion_context}
-
-Customer's order is delayed and they're asking about it.
-
-FACTS:
-{self._format_facts(facts)}
-
-Explain the delay with empathy, provide revised ETA, and reassure the customer.
-""",
-            
-            "frustrated_customer": f"""
-The customer is FRUSTRATED or ANGRY.
-
-FACTS:
-{self._format_facts(facts)}
-
-Respond with:
-1. EMPATHY first (acknowledge their frustration)
-2. EXPLANATION (what happened)
-3. SOLUTION (what you're doing about it)
-4. REASSURANCE
-
-Be warm and understanding. This is critical for customer satisfaction.
-""",
-            
-            "frustrated_customer_with_order": f"""
-The customer is FRUSTRATED about their order.
-
-FACTS:
-{self._format_facts(facts)}
-
-Show empathy first, then provide order details and solution.
-""",
-            
-            "policy_question": f"""
-{emotion_context}
-
-Customer asked about a policy.
-
-POLICY INFORMATION:
-{self._format_facts(facts)}
-
-Explain the policy in simple, customer-friendly terms. Be helpful.
-""",
-            
-            "shipping_inquiry": f"""
-{emotion_context}
-
-Customer asked about shipping.
-
-SHIPPING INFORMATION:
-{self._format_facts(facts)}
-
-Provide clear shipping information.
-""",
-            
-            "general_query": f"""
-{emotion_context}
-
-Customer asked a question.
-
-AVAILABLE INFORMATION:
-{self._format_facts(facts)}
-
-Provide a helpful, natural response. If you don't have enough information, ask for clarification.
-"""
-        }
-        
-        return scenarios.get(scenario, scenarios["general_query"])
-    
-    def _format_facts(self, facts: Dict) -> str:
-        """Format facts dictionary into readable text"""
-        formatted = []
-        
-        # Handle nested structures
-        for key, value in facts.items():
-            if key in ["order_data", "knowledge_data", "shipping_data", "product_data"]:
-                # Nested data structures
-                if isinstance(value, dict):
-                    formatted.append(f"\n{key.upper()}:")
-                    for sub_key, sub_value in value.items():
-                        if isinstance(sub_value, (str, int, float, bool)):
-                            formatted.append(f"  - {sub_key}: {sub_value}")
-            else:
-                # Simple key-value
-                formatted.append(f"- {key}: {value}")
-        
-        return "\n".join(formatted) if formatted else "No specific facts provided"
+        return base
     
     def _fallback_response(
         self,
@@ -266,23 +194,39 @@ Provide a helpful, natural response. If you don't have enough information, ask f
         facts: Dict,
         emotion: str
     ) -> str:
-        """Fallback response if LLM fails"""
+        """Generate fallback response when LLM fails"""
         
+        # Check for escalation
+        if facts.get('escalation'):
+            return "I understand this is important. Let me connect you with our support team who can help you better."
+        
+        # Emotion-based fallbacks
         if emotion == "frustrated":
             return "I understand your concern and I'm here to help. Let me look into this for you right away."
         
-        if scenario == "order_status_simple" and "order_id" in facts:
-            return f"Let me check on order {facts['order_id']} for you."
+        if emotion == "urgent":
+            return "I understand this is urgent. Let me prioritize this and get you the information you need."
         
+        # Scenario-based fallbacks
+        if scenario == "order_status_query":
+            return "I'm here to help with your order! Could you provide a bit more detail so I can assist you better?"
+        
+        if scenario == "policy_question":
+            return "I want to give you accurate information about our policies. Let me connect you with our support team."
+        
+        # Generic fallback
         return "I'm here to help! Could you provide a bit more detail so I can assist you better?"
-
-
-# Singleton instance
-_composer_instance = None
-
-def get_composer() -> LLMResponseComposer:
-    """Get singleton composer instance"""
-    global _composer_instance
-    if _composer_instance is None:
-        _composer_instance = LLMResponseComposer()
-    return _composer_instance
+    
+    def get_retry_stats(self) -> Dict:
+        """Get retry statistics"""
+        total = self.retry_stats['total_calls']
+        success_rate = (self.retry_stats['successful_calls'] / total * 100) if total > 0 else 0
+        
+        return {
+            **self.retry_stats,
+            'success_rate': round(success_rate, 1)
+        }
+    
+    def __repr__(self) -> str:
+        stats = self.get_retry_stats()
+        return f"LLMResponseComposer(model={self.model}, success_rate={stats['success_rate']}%)"
