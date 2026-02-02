@@ -1,0 +1,8 @@
+# Ignore actual environment files with real keys
+*.env.local
+*.env.secret
+
+# Keep template files
+!development.env
+!staging.env
+!production.env
