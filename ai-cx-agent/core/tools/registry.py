@@ -27,10 +27,10 @@ class ToolRegistry:
     
     def _register_tools(self):
         """Register all available tools"""
-        from core.tools.order_status import get_order_status
-        from core.tools.knowledge_search import search_knowledge
-        from core.tools.product_info import get_product_info
-        from core.tools.shipping_checker import check_shipping_eligibility
+        from core.tools.order_tool import get_order_status
+        from core.tools.knowledge_tool import search_knowledge
+        from core.tools.product_tool import get_product_info
+        from core.tools.shipping_tool import check_shipping_eligibility
         
         self.tools = {
             "get_order_status": {
