@@ -1,0 +1,9 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.10.5, pytest-7.4.4, pluggy-1.6.0 -- /Users/manav/Downloads/Customer Support AI Agent/.venv/bin/python
+cachedir: .pytest_cache
+rootdir: /Users/manav/Downloads/Customer Support AI Agent
+plugins: anyio-4.12.1, asyncio-0.21.1
+asyncio: mode=strict
+collecting ... collected 0 items
+
+============================ no tests ran in 0.01s =============================

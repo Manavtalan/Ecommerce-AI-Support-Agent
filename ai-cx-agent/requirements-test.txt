@@ -1,0 +1,33 @@
+# Testing Dependencies for AI Customer Experience Agent
+
+# Core testing framework
+pytest==7.4.3
+pytest-cov==4.1.0
+pytest-html==4.1.1
+pytest-json-report==1.5.0
+pytest-timeout==2.2.0
+pytest-xdist==3.5.0  # Parallel test execution
+
+# Assertion and mocking
+pytest-mock==3.12.0
+responses==0.24.1
+
+# LLM evaluation
+openai==1.12.0
+
+# Data validation
+jsonschema==4.20.0
+pydantic==2.5.3
+
+# Performance testing
+locust==2.20.0  # For load testing
+memory-profiler==0.61.0
+
+# Reporting
+jinja2==3.1.3
+markdown==3.5.1
+
+# Development
+black==23.12.1
+flake8==7.0.0
+mypy==1.8.0
