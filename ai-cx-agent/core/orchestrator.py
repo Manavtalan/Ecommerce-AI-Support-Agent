@@ -16,6 +16,7 @@ from core.conversation.context_resolver import ContextResolver
 from core.conversation.escalation_manager import EscalationManager
 from core.conversation.quality_scorer import ConversationQualityScorer
 import re
+from core.intelligence.analyzer import IntelligenceAnalyzer
 
 
 class ConversationOrchestrator:
@@ -250,6 +251,30 @@ class ConversationOrchestrator:
             scenario = 'escalation_needed'
         else:
             scenario = self._determine_scenario(emotion, facts, tool_used)
+        
+        # === INTELLIGENCE ANALYSIS ===
+        # Analyze user question to add special instructions
+        # Works even if tool wasn't called (context maintained from previous turn)
+        if facts.get("order_data"):
+            analysis = IntelligenceAnalyzer.analyze_question_intent(user_message, facts["order_data"])
+            
+            if analysis.get('special_instructions'):
+                # Add to facts so LLM uses it
+                facts['intelligence_analysis'] = analysis
+                print(f"🧠 Intelligence: {analysis['question_type']}")
+        elif facts.get("active_topic") and facts["active_topic"].get('topic_type') == 'ORDER':
+            # Even if we don't have order_data, we know we're talking about an order
+            # Try to get it from the tool
+            order_id = facts["active_topic"].get('entity_id')
+            if order_id:
+                from core.tools.order_tool import get_order_status
+                order_data = get_order_status(order_id, self.brand_id)
+                if order_data.get('success'):
+                    facts['order_data'] = order_data
+                    analysis = IntelligenceAnalyzer.analyze_question_intent(user_message, order_data)
+                    if analysis.get('special_instructions'):
+                        facts['intelligence_analysis'] = analysis
+                        print(f"🧠 Intelligence: {analysis['question_type']} (from context)")
         
         # Generate response
         response = self.composer.compose_response(

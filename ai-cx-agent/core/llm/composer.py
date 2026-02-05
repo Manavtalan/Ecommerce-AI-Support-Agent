@@ -1,6 +1,6 @@
 """
-LLM Response Composer - WITH RETRY LOGIC
-Generates contextual responses with exponential backoff
+LLM Response Composer - INTELLIGENT VERSION
+Generates contextual responses with ACTUAL DATA USAGE
 """
 
 from typing import Dict, List, Optional
@@ -8,12 +8,13 @@ from openai import OpenAI
 import os
 import time
 from dotenv import load_dotenv
+from datetime import datetime
 
 load_dotenv()
 
 
 class LLMResponseComposer:
-    """Composes LLM responses with intelligent retry logic"""
+    """Composes intelligent LLM responses that actually use tool data"""
     
     def __init__(self, model: str = "gpt-4o-mini"):
         """Initialize composer with retry capability"""
@@ -37,16 +38,16 @@ class LLMResponseComposer:
         max_retries: int = 2
     ) -> str:
         """
-        Compose response with retry logic and exponential backoff
+        Compose intelligent response using tool data
         
         Args:
             scenario: Type of scenario
-            facts: Context and facts
+            facts: Context and facts (includes tool results)
             constraints: Response constraints
             emotion: Detected emotion
             brand_voice: Brand voice configuration
             system_prompt: Custom system prompt
-            max_retries: Maximum retry attempts (default: 2)
+            max_retries: Maximum retry attempts
         
         Returns:
             Generated response string
@@ -54,18 +55,18 @@ class LLMResponseComposer:
         self.retry_stats['total_calls'] += 1
         
         retries = 0
-        backoff = 1.0  # Start with 1 second
+        backoff = 1.0
         
         while retries <= max_retries:
             try:
-                # Build prompt
-                user_prompt = self._build_prompt(scenario, facts, constraints, emotion)
+                # Build INTELLIGENT prompt with data analysis
+                user_prompt = self._build_intelligent_prompt(scenario, facts, constraints, emotion)
                 
-                # Use custom system prompt or build default
+                # Use custom system prompt or build intelligent default
                 if system_prompt:
                     sys_prompt = system_prompt
                 else:
-                    sys_prompt = self._build_system_prompt(brand_voice, constraints)
+                    sys_prompt = self._build_intelligent_system_prompt(brand_voice)
                 
                 # Call LLM
                 response = self.client.chat.completions.create(
@@ -101,121 +102,254 @@ class LLMResponseComposer:
                 is_retryable = any(err in error_type for err in retryable_errors)
                 
                 if retries > max_retries or not is_retryable:
-                    # Max retries reached or non-retryable error
                     print(f"Warning: LLM call failed: {e}")
                     self.retry_stats['failed_calls'] += 1
-                    
-                    # Use fallback
-                    return self._fallback_response(scenario, facts, emotion)
+                    return self._intelligent_fallback(scenario, facts, emotion)
                 
-                # Wait with exponential backoff
                 print(f"   ⏳ LLM error ({error_type}), retrying in {backoff}s... (attempt {retries}/{max_retries})")
                 time.sleep(backoff)
-                backoff *= 2  # Exponential backoff: 1s, 2s, 4s
+                backoff *= 2
                 
                 self.retry_stats['retries'] += 1
         
-        # Should not reach here, but fallback just in case
         self.retry_stats['failed_calls'] += 1
-        return self._fallback_response(scenario, facts, emotion)
+        return self._intelligent_fallback(scenario, facts, emotion)
     
-    def _build_prompt(
+    def _build_intelligent_prompt(
         self,
         scenario: str,
         facts: Dict,
         constraints: List[str],
         emotion: str
     ) -> str:
-        """Build user prompt"""
+        """Build INTELLIGENT prompt that tells LLM to USE THE DATA"""
         
-        prompt_parts = [f"Scenario: {scenario}"]
+        prompt_parts = []
         
-        # Add emotion context
-        if emotion != "neutral":
-            prompt_parts.append(f"Customer emotion: {emotion}")
+        # Add emotion context with empathy instruction
+        if emotion == "frustrated":
+            prompt_parts.append("⚠️ CUSTOMER IS FRUSTRATED - Show empathy first, then provide solution")
+        elif emotion == "urgent":
+            prompt_parts.append("⚠️ URGENT REQUEST - Acknowledge urgency and provide immediate help")
         
-        # Add facts
-        if facts.get("order_data"):
-            order = facts["order_data"]
-            prompt_parts.append(f"Order: {order.get('order_id', 'N/A')} - Status: {order.get('status', 'unknown')}")
-        
-        if facts.get("knowledge_data"):
-            knowledge = facts["knowledge_data"]
-            if isinstance(knowledge, list) and knowledge:
-                prompt_parts.append(f"Relevant info: {knowledge[0][:200]}")
-        
-        if facts.get("active_topic"):
-            topic = facts["active_topic"]
-            prompt_parts.append(f"Context: {topic.get('topic_type')} {topic.get('entity_id')}")
-        
+        # Add escalation if needed
         if facts.get("escalation"):
             esc = facts["escalation"]
-            prompt_parts.append(f"ESCALATION NEEDED: {esc.get('reason')}")
+            return f"ESCALATION REQUIRED: {esc.get('suggested_message', 'Let me connect you with our support team.')}"
         
+        # === ORDER DATA - BE SPECIFIC ===
+        if facts.get("order_data"):
+            order = facts["order_data"]
+            
+            prompt_parts.append("📦 ORDER INFORMATION (USE THIS DATA IN YOUR RESPONSE):")
+            prompt_parts.append(f"  Order ID: #{order.get('order_id')}")
+            prompt_parts.append(f"  Customer: {order.get('customer_name')}")
+            prompt_parts.append(f"  Status: {order.get('status', 'unknown').upper()}")
+            
+            # Items
+            items = order.get('items', [])
+            if items:
+                prompt_parts.append(f"  Items ordered:")
+                for item in items:
+                    prompt_parts.append(f"    • {item.get('name')} ({item.get('color')}, Size {item.get('size')}) - Qty: {item.get('quantity')}")
+            
+            # Shipping details
+            shipping = order.get('shipping', {})
+            if shipping:
+                prompt_parts.append(f"  Shipping Status:")
+                prompt_parts.append(f"    • Courier: {shipping.get('courier')}")
+                prompt_parts.append(f"    • Tracking: {shipping.get('tracking_number')}")
+                prompt_parts.append(f"    • Shipped Date: {shipping.get('shipped_date')}")
+                prompt_parts.append(f"    • Estimated Delivery: {shipping.get('estimated_delivery')}")
+                prompt_parts.append(f"    • Last Update: {shipping.get('last_update')}")
+                prompt_parts.append(f"    • Current Location: {shipping.get('current_location')}")
+            
+            prompt_parts.append("")
+            prompt_parts.append("🎯 YOUR TASK: Tell the customer about their SPECIFIC order using the details above.")
+            prompt_parts.append("   - Mention the item name, color, and size")
+            prompt_parts.append("   - Give them the tracking number")
+            prompt_parts.append("   - Tell them the estimated delivery date")
+            prompt_parts.append("   - Use the 'Last Update' to tell them where it is now")
+        
+        # === KNOWLEDGE DATA ===
+        if facts.get("knowledge_data"):
+            knowledge = facts["knowledge_data"]
+            prompt_parts.append("")
+            prompt_parts.append("📚 RELEVANT POLICY INFORMATION:")
+            
+            if isinstance(knowledge, list):
+                for i, chunk in enumerate(knowledge[:3], 1):  # Top 3 chunks
+                    prompt_parts.append(f"  [{i}] {chunk[:300]}")
+            elif isinstance(knowledge, str):
+                prompt_parts.append(f"  {knowledge[:500]}")
+            
+            prompt_parts.append("")
+            prompt_parts.append("🎯 YOUR TASK: Answer the policy question using the information above.")
+            prompt_parts.append("   - Be specific about policies")
+            prompt_parts.append("   - Quote relevant parts if helpful")
+        
+        # === PRODUCT DATA ===
+        if facts.get("product_data"):
+            product = facts["product_data"]
+            prompt_parts.append("")
+            prompt_parts.append("👕 PRODUCT INFORMATION:")
+            prompt_parts.append(f"  Product: {product.get('name')}")
+            prompt_parts.append(f"  Price: ₹{product.get('price')}")
+            prompt_parts.append(f"  Available Sizes: {', '.join(product.get('sizes', []))}")
+            prompt_parts.append(f"  Available Colors: {', '.join(product.get('colors', []))}")
+            prompt_parts.append(f"  In Stock: {'Yes' if product.get('in_stock') else 'No'}")
+        
+        # === SHIPPING DATA ===
+        if facts.get("shipping_data"):
+            shipping = facts["shipping_data"]
+            prompt_parts.append("")
+            prompt_parts.append("🚚 SHIPPING INFORMATION:")
+            prompt_parts.append(f"  Location: {shipping.get('location')}")
+            prompt_parts.append(f"  Available: {'Yes' if shipping.get('available') else 'No'}")
+            prompt_parts.append(f"  Estimated Days: {shipping.get('estimated_days')}")
+            prompt_parts.append(f"  Cost: ₹{shipping.get('cost')}")
+        
+        # === CONTEXT ===
+        if facts.get("active_topic"):
+            topic = facts["active_topic"]
+            prompt_parts.append("")
+            prompt_parts.append(f"💭 CONVERSATION CONTEXT: Customer is discussing {topic.get('topic_type')} {topic.get('entity_id')}")
+        
+        # === EMPATHY INSTRUCTION ===
         if facts.get("empathy_needed"):
-            prompt_parts.append("Show empathy before addressing issue")
+            prompt_parts.append("")
+            prompt_parts.append("💚 IMPORTANT: Show empathy and understanding BEFORE providing information")
         
-        # Add constraints
-        if constraints:
-            prompt_parts.append(f"Constraints: {', '.join(constraints)}")
+        # === INTELLIGENCE ANALYSIS ===
+        if facts.get("intelligence_analysis"):
+            intel = facts["intelligence_analysis"]
+            prompt_parts.append("")
+            prompt_parts.append("="*70)
+            prompt_parts.append("🧠 INTELLIGENT ANALYSIS OF USER QUESTION:")
+            prompt_parts.append("="*70)
+            
+            if intel.get('special_instructions'):
+                prompt_parts.append(intel['special_instructions'])
+            
+            if intel.get('delay_analysis'):
+                delay = intel['delay_analysis']
+                prompt_parts.append("")
+                prompt_parts.append("📊 DELAY ANALYSIS:")
+                prompt_parts.append(f"  Is Late: {delay['is_late']}")
+                prompt_parts.append(f"  Explanation: {delay['explanation']}")
+            
+            prompt_parts.append("="*70)
+            prompt_parts.append("")
+        
+        # === TOOL ERROR HANDLING ===
+        if facts.get("tool_error"):
+            prompt_parts.append("")
+            prompt_parts.append(f"⚠️ TOOL ERROR: {facts['tool_error']}")
+            prompt_parts.append("🎯 YOUR TASK: Apologize politely and ask for more information or offer alternative help")
+        
+        # Add scenario
+        prompt_parts.insert(0, f"SCENARIO: {scenario}")
+        prompt_parts.insert(1, "")
         
         return "\n".join(prompt_parts)
     
-    def _build_system_prompt(
+    def _build_intelligent_system_prompt(
         self,
-        brand_voice: Optional[Dict],
-        constraints: List[str]
+        brand_voice: Optional[Dict]
     ) -> str:
-        """Build system prompt from brand voice"""
+        """Build intelligent system prompt"""
         
-        base = "You are a helpful customer support agent."
+        prompt = """You are an intelligent customer support agent.
+
+🎯 YOUR PRIMARY GOAL: Be HELPFUL and SPECIFIC using the data provided.
+
+CRITICAL RULES:
+1. ALWAYS use specific details from the data (order items, tracking numbers, dates, etc.)
+2. NEVER give generic responses like "Your order has been shipped!" - be specific!
+3. If customer asks "what's in my order?" - LIST THE ITEMS with colors and sizes
+4. If customer asks "why is it late?" - COMPARE dates and give real analysis
+5. If customer asks "where is it?" - Give the CURRENT LOCATION from shipping data
+6. Use natural, conversational language - don't sound robotic
+7. Don't repeat yourself - each response should add new information
+
+EXAMPLES OF GOOD vs BAD:
+
+❌ BAD: "Your order has been shipped! 🎉"
+✅ GOOD: "Your order #12345 (Summer Floral Dress in Blue, Size M) shipped on Jan 25th via Delhivery. It's currently at Bangalore Local Office and should arrive tomorrow (Jan 29th). Tracking: DEL123456789"
+
+❌ BAD: "Let me help you with that!"
+✅ GOOD: "Looking at your order, you have a Summer Floral Dress that should arrive by Jan 29th."
+
+❌ BAD: "Your order is on the way!"
+✅ GOOD: "Your dress is currently out for delivery in Bangalore and will reach you by tomorrow."
+"""
         
         if brand_voice:
             tone = brand_voice.get('tone', 'professional')
             emoji = brand_voice.get('emoji_usage', 'moderate')
+            formality = brand_voice.get('formality', 'casual')
             
-            base += f" Tone: {tone}."
+            prompt += f"\n\nBRAND VOICE:"
+            prompt += f"\n- Tone: {tone}"
+            prompt += f"\n- Formality: {formality}"
             
             if emoji == 'frequent':
-                base += " Use emojis frequently to be friendly."
+                prompt += "\n- Emojis: Use frequently (2-3 per response)"
             elif emoji == 'moderate':
-                base += " Use emojis moderately."
-            elif emoji == 'none':
-                base += " Do not use emojis."
+                prompt += "\n- Emojis: Use moderately (1-2 per response)"
+            elif emoji == 'minimal':
+                prompt += "\n- Emojis: Use sparingly (0-1 per response)"
+            else:
+                prompt += "\n- Emojis: Don't use"
+            
+            if brand_voice.get('personality'):
+                prompt += f"\n- Personality: {brand_voice['personality']}"
         
-        if constraints:
-            base += f" Constraints: {', '.join(constraints)}."
-        
-        return base
+        return prompt
     
-    def _fallback_response(
+    def _intelligent_fallback(
         self,
         scenario: str,
         facts: Dict,
         emotion: str
     ) -> str:
-        """Generate fallback response when LLM fails"""
+        """Generate intelligent fallback when LLM fails"""
         
-        # Check for escalation
+        # Escalation
         if facts.get('escalation'):
-            return "I understand this is important. Let me connect you with our support team who can help you better."
+            return "I understand this is important. Let me connect you with our support team who can help you right away."
+        
+        # Order with data
+        if facts.get("order_data"):
+            order = facts["order_data"]
+            items = order.get('items', [])
+            shipping = order.get('shipping', {})
+            
+            response = f"Your order #{order.get('order_id')} "
+            
+            if items:
+                item_names = ", ".join([item.get('name', 'item') for item in items])
+                response += f"({item_names}) "
+            
+            response += f"is {order.get('status', 'being processed')}."
+            
+            if shipping.get('estimated_delivery'):
+                response += f" Expected delivery: {shipping.get('estimated_delivery')}."
+            
+            if shipping.get('tracking_number'):
+                response += f" Tracking: {shipping.get('tracking_number')}"
+            
+            return response
         
         # Emotion-based fallbacks
         if emotion == "frustrated":
-            return "I understand your concern and I'm here to help. Let me look into this for you right away."
+            return "I understand your frustration. Let me help you resolve this right away. Could you provide more details?"
         
         if emotion == "urgent":
-            return "I understand this is urgent. Let me prioritize this and get you the information you need."
+            return "I understand this is urgent. Let me prioritize this for you. What specific information do you need?"
         
-        # Scenario-based fallbacks
-        if scenario == "order_status_query":
-            return "I'm here to help with your order! Could you provide a bit more detail so I can assist you better?"
-        
-        if scenario == "policy_question":
-            return "I want to give you accurate information about our policies. Let me connect you with our support team."
-        
-        # Generic fallback
-        return "I'm here to help! Could you provide a bit more detail so I can assist you better?"
+        # Generic but helpful
+        return "I'm here to help! Could you tell me more about what you need assistance with?"
     
     def get_retry_stats(self) -> Dict:
         """Get retry statistics"""
