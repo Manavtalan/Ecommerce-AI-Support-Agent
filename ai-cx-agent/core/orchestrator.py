@@ -15,6 +15,9 @@ from core.brands.registry import get_brand_registry
 from core.conversation.context_resolver import ContextResolver
 from core.conversation.escalation_manager import EscalationManager
 from core.conversation.quality_scorer import ConversationQualityScorer
+from core.intelligence.intent_classifier import IntentClassifier
+from core.llm.response_composer import ResponseComposer
+from core.conversation.smart_escalation import SmartEscalationManager
 import re
 from core.intelligence.analyzer import IntelligenceAnalyzer
 
@@ -42,7 +45,12 @@ class ConversationOrchestrator:
         self.context = ConversationContext()
         self.composer = LLMResponseComposer()
         
-        # Intelligence components
+        # Intelligence components - NEW
+        self.intent_classifier = IntentClassifier()
+        self.response_composer = ResponseComposer()
+        self.smart_escalation_manager = SmartEscalationManager()
+        
+        # OLD intelligence components (keep for backwards compatibility)
         self.context_resolver = ContextResolver(self.composer.client)
         self.escalation_manager = EscalationManager()
         self.quality_scorer = ConversationQualityScorer()
@@ -114,6 +122,30 @@ class ConversationOrchestrator:
     ) -> Tuple[str, Dict]:
         """Process message with full intelligence + quality scoring"""
         
+        # ========== NEW INTELLIGENCE LAYER ==========
+        
+        # === STEP 1: ANALYZE INTENT ===
+        intent = self.intent_classifier.analyze(
+            user_message=user_message,
+            context={'order_number': self.active_topic.get('entity_id') if self.active_topic else None}
+        )
+        
+        print(f"🧠 Intent: {intent.primary_intent}")
+        print(f"❓ Specific: {intent.specific_question}")
+        print(f"😊 Emotion: {intent.user_emotion}")
+        
+        # === STEP 2: HANDLE MISSING DATA ===
+        if intent.missing_data:
+            response = self.response_composer._compose_missing_data_response(intent)
+            metadata = {
+                'intent': intent.primary_intent,
+                'missing_data': intent.missing_data,
+                'handled_by': 'response_composer'
+            }
+            return response, metadata
+        
+        # ========== EXISTING CODE CONTINUES ==========
+        
         # Add to context
         self.context.add_user_message(user_message)
         
@@ -141,34 +173,6 @@ class ConversationOrchestrator:
         facts["brand_name"] = self.brand_config.get("name")
         facts["brand_voice"] = self.brand_config.get("voice", {})
         
-        # === ESCALATION CHECK ===
-        escalation_check = self.escalation_manager.should_escalate({
-            'message': user_message,
-            'emotion': emotion,
-            'emotion_history': self.emotion_history,
-            'confidence': 1.0,
-            'scenario': '',
-            'tool_failures': self.tool_stats.get('tool_failures', 0)
-        })
-        
-        if escalation_check['should_escalate']:
-            print(f"🚨 ESCALATION: Tier {escalation_check['escalation_tier']} - {escalation_check['reason']}")
-            
-            self.escalation_stats["escalations_triggered"] += 1
-            
-            if escalation_check['escalation_tier'] == 1:
-                self.escalation_stats["tier1_escalations"] += 1
-            elif escalation_check['escalation_tier'] == 2:
-                self.escalation_stats["tier2_escalations"] += 1
-            
-            facts['escalation'] = escalation_check
-            self.escalation_manager.log_escalation(escalation_check)
-        
-        elif escalation_check.get('prevent_escalation'):
-            print(f"💚 Escalation prevented: Empathy first")
-            self.escalation_stats["escalations_prevented"] += 1
-            facts['empathy_needed'] = True
-        
         # === CONTEXT RESOLUTION ===
         if self.active_topic:
             context_result = self.context_resolver.resolve_context(
@@ -189,12 +193,48 @@ class ConversationOrchestrator:
                 self.active_topic = None
                 self.context_stats["topic_switches"] += 1
         
+        # ========== NEW: GATHER TOOL RESULTS FOR COMPOSER ==========
+        
+        tool_results_for_composer = {}
+        
+        if intent.primary_intent in [
+            'order_status_inquiry', 
+            'order_contents_inquiry',
+            'cancel_order', 
+            'refund_request',
+            'exchange_request',
+            'change_address',
+            'problem_report'
+        ]:
+            # Need order data
+            order_id = None
+            
+            # Try to get from active topic
+            if self.active_topic and self.active_topic.get('topic_type') == 'ORDER':
+                order_id = self.active_topic.get('entity_id')
+            
+            # Or extract from message
+            if not order_id:
+                match = re.search(r'\b(\d{4,5})\b', user_message)
+                if match:
+                    order_id = match.group(1)
+            
+            # Get order data
+            if order_id and self.tools_available:
+                from core.tools.order_tool import get_order_status
+                order_data = get_order_status(order_id, self.brand_id)
+                if order_data.get('success'):
+                    tool_results_for_composer['order_data'] = order_data.get('data', {})
+                    print(f"📦 Loaded order data for composer: {order_id}")
+        
+        # ========== EXISTING TOOL EXECUTION CODE ==========
+        
         # Tool execution
         tool_used = None
         tool_result = None
         tool_success = False
         
-        if self.tools_available and not facts.get('escalation'):
+        if self.tools_available:
             selected_tool = self.tools.select_tool(user_message)
             
             if selected_tool:
@@ -247,24 +287,16 @@ class ConversationOrchestrator:
                         facts["tool_error"] = tool_result["error"]
         
         # Determine scenario
-        if facts.get('escalation'):
-            scenario = 'escalation_needed'
-        else:
-            scenario = self._determine_scenario(emotion, facts, tool_used)
+        scenario = self._determine_scenario(emotion, facts, tool_used)
         
         # === INTELLIGENCE ANALYSIS ===
-        # Analyze user question to add special instructions
-        # Works even if tool wasn't called (context maintained from previous turn)
         if facts.get("order_data"):
             analysis = IntelligenceAnalyzer.analyze_question_intent(user_message, facts["order_data"])
             
             if analysis.get('special_instructions'):
-                # Add to facts so LLM uses it
                 facts['intelligence_analysis'] = analysis
                 print(f"🧠 Intelligence: {analysis['question_type']}")
         elif facts.get("active_topic") and facts["active_topic"].get('topic_type') == 'ORDER':
-            # Even if we don't have order_data, we know we're talking about an order
-            # Try to get it from the tool
             order_id = facts["active_topic"].get('entity_id')
             if order_id:
                 from core.tools.order_tool import get_order_status
@@ -276,19 +308,31 @@ class ConversationOrchestrator:
                         facts['intelligence_analysis'] = analysis
                         print(f"🧠 Intelligence: {analysis['question_type']} (from context)")
         
-        # Generate response
-        response = self.composer.compose_response(
-            scenario=scenario,
-            facts=facts,
-            constraints=constraints or [],
-            emotion=emotion,
-            brand_voice=self.brand_config.get("voice", {}),
-            system_prompt=self.system_prompt
+        # ========== NEW: USE SMART ESCALATION & RESPONSE COMPOSER ==========
+        
+        # Check if we should escalate using NEW smart escalation
+        should_escalate, escalation_reason = self.smart_escalation_manager.should_escalate(
+            intent,
+            tool_results_for_composer,
+            self.emotion_history
         )
         
-        # If escalation suggested message exists, use it
-        if facts.get('escalation') and facts['escalation'].get('suggested_message'):
-            response = facts['escalation']['suggested_message']
+        if should_escalate:
+            print(f"🚨 SMART ESCALATION: {escalation_reason}")
+            response = self.smart_escalation_manager.get_escalation_message(intent, escalation_reason)
+            
+            # Track escalation
+            self.escalation_stats["escalations_triggered"] += 1
+            
+        else:
+            # === USE NEW RESPONSE COMPOSER ===
+            print(f"✨ Using smart response composer")
+            response = self.response_composer.compose(
+                user_message=user_message,
+                intent=intent,
+                tool_results=tool_results_for_composer,
+                context={'order_number': self.active_topic.get('entity_id') if self.active_topic else None}
+            )
         
         # Add to context
         self.context.add_assistant_message(response)
@@ -305,7 +349,7 @@ class ConversationOrchestrator:
                 'tool_used': tool_used,
                 'tool_success': tool_success,
                 'active_topic': self.active_topic,
-                'escalation': facts.get('escalation')
+                'escalation': should_escalate
             },
             'brand_config': self.brand_config
         })
@@ -344,10 +388,12 @@ class ConversationOrchestrator:
             "tool_success": tool_success,
             "active_topic": self.active_topic,
             "context_maintained": bool(self.active_topic and facts.get('context_confidence')),
-            "escalation": facts.get('escalation'),
+            "escalation_triggered": should_escalate,
             "quality_score": quality_score,
             "message_count": len(self.context),
-            "token_usage": self.context.get_context_window_usage()
+            "token_usage": self.context.get_context_window_usage(),
+            "intent": intent.primary_intent,
+            "specific_question": intent.specific_question
         }
         
         self.total_messages_processed += 1
