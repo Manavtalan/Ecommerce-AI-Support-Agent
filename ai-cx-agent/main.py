@@ -80,7 +80,7 @@ def print_stats(orchestrator: ConversationOrchestrator):
     print()
     
     # Context usage
-    context_usage = orchestrator.get_context().get_context_window_usage()
+    context_usage = orchestrator.stats
     print(f"  Context Window Usage: {context_usage['percentage_used']:.1f}%")
     print(f"  Tokens Used: ~{context_usage['current_tokens']}")
     print()
@@ -115,8 +115,7 @@ def main():
         
         # Create orchestrator
         orchestrator = ConversationOrchestrator(
-            brand_voice=brand.get_brand_voice(),
-            system_prompt=brand.get_system_prompt()
+        brand_id="fashionhub"
         )
         print(f"✅ Created: {orchestrator}")
         
@@ -191,15 +190,13 @@ def main():
                 if "error" not in order_facts:
                     facts = order_facts
                     # Update context metadata
-                    orchestrator.get_context().update_metadata("order_id", order_id_to_use)
             
             # Generate response through orchestrator
             print()
             print("🤖 Agent: ", end="", flush=True)
             
             response, metadata = orchestrator.process_message(
-                user_message=user_input,
-                facts=facts
+            user_message=user_input
             )
             
             # Print response
