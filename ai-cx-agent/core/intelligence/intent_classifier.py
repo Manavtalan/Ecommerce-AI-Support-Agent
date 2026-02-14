@@ -1,389 +1,361 @@
 """
-Intent Classifier - The Brain of the AI Agent
-Analyzes user messages to understand what they want and how to respond
+Intent Classifier - LLM-Powered Intelligence
+Uses GPT to understand what users actually want, not keyword matching
 """
 
 import re
+import os
+import json
 from typing import Dict, List, Optional, Any
-from dataclasses import dataclass
+from dataclasses import dataclass, field
+from openai import OpenAI
+from dotenv import load_dotenv
+
+load_dotenv()
 
 
 @dataclass
 class UserIntent:
     """Structured representation of what the user wants"""
-    primary_intent: str  # order_status, cancel_order, refund, etc.
-    specific_question: Optional[str]  # delivery_date, tracking, contents, etc.
-    missing_data: List[str]  # ['order_number', 'reason', etc.]
-    user_emotion: str  # neutral, frustrated, happy, worried, angry
-    problem_type: Optional[str]  # damaged, wrong_item, not_received, late
+    primary_intent: str
+    specific_question: Optional[str]
+    missing_data: List[str]
+    user_emotion: str
+    problem_type: Optional[str]
     needs_escalation: bool
-    confidence: float  # 0.0 to 1.0
+    confidence: float
 
 
 class IntentClassifier:
     """
-    Analyzes user messages to determine intent, emotion, and required actions
-    This is the 'intelligence' that makes the agent smart
-    """
+    LLM-powered intent classifier.
+    Uses GPT-4o-mini to understand intent — not keyword matching.
     
+    Why LLM instead of keywords:
+    - "How long does shipping take?" → NOT a greeting
+    - "Do you ship to Canada?" → NOT a greeting  
+    - "I ordered blue but got red" → IS a problem_report
+    - "Oh great, another delay" → IS frustrated (sarcasm)
+    - "When was my order shipped?" → IS order_status_inquiry
+    """
+
+    # Valid intents the classifier can return
+    VALID_INTENTS = [
+        'greeting',
+        'order_status_inquiry',
+        'order_contents_inquiry',
+        'cancel_order',
+        'return_request',
+        'refund_request',
+        'exchange_request',
+        'change_address',
+        'problem_report',
+        'policy_inquiry',
+        'product_inquiry',
+        'general_help',
+        'gratitude',
+        'escalation_request',
+        'out_of_scope',
+        'unknown'
+    ]
+
+    VALID_EMOTIONS = [
+        'neutral', 'frustrated', 'angry', 'worried',
+        'urgent', 'happy', 'confused', 'sad', 'sarcastic'
+    ]
+
+    VALID_PROBLEMS = [
+        'damaged_item', 'wrong_item', 'not_received',
+        'delayed', 'missing_item', None
+    ]
+
     def __init__(self):
-        self.order_number_pattern = re.compile(r'(?:order|#)\s*(\d{5,})')
-        
+        self.client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+        self.order_pattern = re.compile(r'(?:order|#)\s*#?(\d{4,6})', re.IGNORECASE)
+
     def analyze(
-        self, 
-        user_message: str, 
+        self,
+        user_message: str,
         conversation_history: List[Dict] = None,
         context: Dict[str, Any] = None
     ) -> UserIntent:
         """
-        Main analysis method - determines what user wants
-        
-        Args:
-            user_message: Current user message
-            conversation_history: Previous messages in conversation
-            context: Current conversation context (order_number, etc.)
-            
-        Returns:
-            UserIntent with all detected information
+        Analyze user message using LLM to determine intent.
+        Falls back to rule-based if LLM fails.
         """
-        message_lower = user_message.lower()
-        
-        # Extract order number if present
-        order_number = self._extract_order_number(user_message, context)
-        
-        # Detect primary intent
-        primary_intent = self._detect_primary_intent(message_lower)
-        
-        # Detect specific question within intent
-        specific_question = self._detect_specific_question(message_lower, primary_intent)
-        
-        # Detect missing data
-        missing_data = self._detect_missing_data(primary_intent, order_number, message_lower)
-        
-        # Detect user emotion
-        emotion = self._detect_emotion(message_lower, conversation_history)
-        
-        # Detect problem type (if any)
-        problem_type = self._detect_problem_type(message_lower)
-        
-        # Determine if escalation needed
-        needs_escalation = self._should_escalate(
-            primary_intent, 
-            problem_type, 
-            emotion,
-            message_lower
+
+        # Get recent conversation context for LLM
+        recent_history = self._format_history(conversation_history or [])
+
+        # Get active order from context
+        active_order = context.get('order_number') if context else None
+
+        # Use LLM to classify
+        try:
+            result = self._llm_classify(user_message, recent_history, active_order)
+            return self._build_intent(result, user_message, active_order)
+        except Exception as e:
+            print(f"   ⚠️  LLM classifier error: {e}, using fallback")
+            return self._fallback_classify(user_message, active_order)
+
+    def _llm_classify(
+        self,
+        message: str,
+        history: str,
+        active_order: Optional[str]
+    ) -> Dict:
+        """Use LLM to classify intent with full understanding"""
+
+        system_prompt = f"""You are an intent classifier for a fashion e-commerce customer support agent.
+
+Analyze the customer message and return a JSON object with these exact fields:
+
+{{
+  "primary_intent": "<intent>",
+  "specific_question": "<specific aspect they want to know, or null>",
+  "missing_data": ["<list of what's needed>"],
+  "user_emotion": "<emotion>",
+  "problem_type": "<problem type or null>",
+  "needs_escalation": <true/false>,
+  "confidence": <0.0-1.0>
+}}
+
+VALID INTENTS:
+- greeting: hello, hi, hey
+- order_status_inquiry: where is order, when arrives, shipping status, tracking, was it shipped, ship date
+- order_contents_inquiry: what's in my order, what did I order
+- cancel_order: wants to cancel
+- return_request: wants to return item
+- refund_request: wants money back
+- exchange_request: wants different size/color
+- change_address: wants to update delivery address
+- problem_report: damaged, wrong item, not received, missing
+- policy_inquiry: questions about policies, shipping cost, return window, how to return, payment methods, discounts
+- product_inquiry: product availability, sizes, colors, prices
+- general_help: confused, needs general assistance
+- gratitude: thank you, thanks, appreciate
+- escalation_request: wants human agent, manager, supervisor
+- out_of_scope: weather, unrelated topics, hacking
+- unknown: truly unclear
+
+VALID EMOTIONS: neutral, frustrated, angry, worried, urgent, happy, confused, sad, sarcastic
+
+PROBLEM TYPES (only for problem_report): damaged_item, wrong_item, not_received, delayed, missing_item
+
+MISSING DATA RULES:
+- Add "order_number" ONLY if intent needs an order AND no order number exists in message OR context
+- Add "exchange_preference" ONLY if exchange_request AND no size/color mentioned
+- NEVER add "reason" for refund_request — customers don't need to justify refunds
+- Do NOT add "order_number" if active_order_id is provided in context
+
+ACTIVE ORDER CONTEXT: {active_order or 'None'}
+{f'NOTE: Customer already provided order #{active_order} — do NOT add order_number to missing_data' if active_order else ''}
+
+CRITICAL CLASSIFICATION RULES:
+1. "How long does shipping take?" = policy_inquiry (NOT greeting)
+2. "Do you ship to Canada?" = policy_inquiry (NOT greeting)  
+3. "Can I get expedited shipping?" = policy_inquiry (NOT greeting)
+4. "When was my order shipped?" = order_status_inquiry (NOT greeting)
+5. "How do I return an item?" = policy_inquiry (NOT unknown)
+6. "When will I get my refund?" = policy_inquiry (NOT order_status)
+7. "Oh great, another delay" = order_status_inquiry + emotion: sarcastic/frustrated
+8. "I ordered blue but got red" = problem_report, problem_type: wrong_item
+9. "The package says delivered but I didn't get it" = problem_report, problem_type: not_received
+10. "I want to speak to a manager" = escalation_request
+11. "You're all idiots" = escalation_request + emotion: angry
+12. Sarcasm like "Thanks a lot" after a complaint = frustrated, NOT happy
+13. "What payment methods do you accept?" = policy_inquiry
+14. "Can I change delivery address?" = change_address
+15. If customer is very angry/abusive = needs_escalation: true
+
+CONVERSATION HISTORY FOR CONTEXT:
+{history}"""
+
+        response = self.client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": f"Customer message: {message}"}
+            ],
+            temperature=0.1,  # Low temperature for consistent classification
+            max_tokens=300,
+            response_format={"type": "json_object"}
         )
-        
-        # Calculate confidence
-        confidence = self._calculate_confidence(message_lower, primary_intent)
-        
+
+        return json.loads(response.choices[0].message.content)
+
+    def _build_intent(self, result: Dict, message: str, active_order: Optional[str]) -> UserIntent:
+        """Build UserIntent from LLM result with validation"""
+
+        # Validate and sanitize primary_intent
+        primary_intent = result.get('primary_intent', 'unknown')
+        if primary_intent not in self.VALID_INTENTS:
+            primary_intent = 'unknown'
+
+        # Validate emotion
+        emotion = result.get('user_emotion', 'neutral')
+        if emotion not in self.VALID_EMOTIONS:
+            emotion = 'neutral'
+
+        # Validate problem_type
+        problem_type = result.get('problem_type')
+        if problem_type not in self.VALID_PROBLEMS:
+            problem_type = None
+
+        # Clean missing_data — never include order_number if we have active order
+        missing_data = result.get('missing_data', [])
+        if active_order and 'order_number' in missing_data:
+            missing_data.remove('order_number')
+
+        # Never require 'reason' for refunds
+        if 'reason' in missing_data:
+            missing_data.remove('reason')
+
+        # Escalation: explicit request OR very angry
+        needs_escalation = result.get('needs_escalation', False)
+        if primary_intent == 'escalation_request':
+            needs_escalation = True
+        if emotion == 'angry' and any(w in message.lower() for w in [
+            'idiot', 'stupid', 'terrible', 'lawsuit', 'lawyer', 'useless', 'worst ever'
+        ]):
+            needs_escalation = True
+
         return UserIntent(
             primary_intent=primary_intent,
-            specific_question=specific_question,
+            specific_question=result.get('specific_question'),
             missing_data=missing_data,
             user_emotion=emotion,
             problem_type=problem_type,
             needs_escalation=needs_escalation,
-            confidence=confidence
+            confidence=float(result.get('confidence', 0.8))
         )
-    
-    def _extract_order_number(self, message: str, context: Dict) -> Optional[str]:
-        """Extract order number from message or context"""
-        # Check context first (from previous turns)
-        if context and 'order_number' in context:
-            return context['order_number']
-        
-        # Try to extract from current message
-        match = self.order_number_pattern.search(message)
+
+    def _format_history(self, history: List[Dict]) -> str:
+        """Format recent conversation history for LLM context"""
+        if not history:
+            return "No previous conversation."
+
+        # Only use last 4 messages for context
+        recent = history[-4:]
+        lines = []
+        for msg in recent:
+            role = "Customer" if msg.get('role') == 'user' else "Agent"
+            content = msg.get('content', '')[:150]  # Truncate long messages
+            lines.append(f"{role}: {content}")
+
+        return "\n".join(lines)
+
+    def _fallback_classify(self, message: str, active_order: Optional[str]) -> UserIntent:
+        """
+        Rule-based fallback when LLM fails.
+        Better than the original — handles more cases correctly.
+        """
+        msg = message.lower().strip()
+        missing = []
+
+        # Escalation (check first)
+        if any(w in msg for w in ['manager', 'supervisor', 'human', 'real person', 'escalate']):
+            return UserIntent(
+                primary_intent='escalation_request',
+                specific_question=None,
+                missing_data=[],
+                user_emotion='frustrated',
+                problem_type=None,
+                needs_escalation=True,
+                confidence=0.9
+            )
+
+        # Greeting
+        if msg in ['hi', 'hello', 'hey', 'hii'] or msg.startswith(('hi ', 'hello ', 'hey ')):
+            return UserIntent('greeting', None, [], 'neutral', None, False, 0.95)
+
+        # Gratitude
+        if any(w in msg for w in ['thank', 'thanks', 'appreciate', 'great help']):
+            return UserIntent('gratitude', None, [], 'happy', None, False, 0.9)
+
+        # Order status — broad patterns
+        if any(w in msg for w in ['where is', 'where\'s', 'status', 'track', 'when will',
+                                   'when was', 'arrive', 'shipped', 'shipping', 'delivery',
+                                   'how long', 'kahan']):
+            order_id = self._extract_order_id(message) or active_order
+            if not order_id:
+                missing.append('order_number')
+            # Detect specific question
+            specific = None
+            if any(w in msg for w in ['when', 'arrive', 'delivery date']):
+                specific = 'delivery_date'
+            elif any(w in msg for w in ['where', 'location', 'kahan']):
+                specific = 'current_location'
+            elif 'track' in msg:
+                specific = 'tracking_info'
+            elif 'ship' in msg:
+                specific = 'ship_date'
+            return UserIntent('order_status_inquiry', specific, missing, 'neutral', None, False, 0.75)
+
+        # Policy questions — anything asking HOW/DO/CAN about store policies
+        if any(w in msg for w in ['policy', 'how do i return', 'can i return', 'how much',
+                                   'do you ship', 'do you accept', 'payment', 'refund take',
+                                   'return window', 'exchange policy', 'discount', 'price match']):
+            return UserIntent('policy_inquiry', None, [], 'neutral', None, False, 0.8)
+
+        # Cancellation
+        if any(w in msg for w in ['cancel', 'stop order', 'don\'t want it']):
+            order_id = self._extract_order_id(message) or active_order
+            if not order_id:
+                missing.append('order_number')
+            return UserIntent('cancel_order', None, missing, 'neutral', None, False, 0.85)
+
+        # Return
+        if any(w in msg for w in ['return', 'send back', 'give back']):
+            order_id = self._extract_order_id(message) or active_order
+            if not order_id:
+                missing.append('order_number')
+            return UserIntent('return_request', None, missing, 'neutral', None, False, 0.85)
+
+        # Refund
+        if any(w in msg for w in ['refund', 'money back', 'get my money']):
+            order_id = self._extract_order_id(message) or active_order
+            if not order_id:
+                missing.append('order_number')
+            return UserIntent('refund_request', None, missing, 'neutral', None, False, 0.85)
+
+        # Exchange
+        if any(w in msg for w in ['exchange', 'swap', 'different size', 'different color']):
+            order_id = self._extract_order_id(message) or active_order
+            if not order_id:
+                missing.append('order_number')
+            if not any(w in msg for w in ['size', 'color', 'colour', 'small', 'medium', 'large']):
+                missing.append('exchange_preference')
+            return UserIntent('exchange_request', None, missing, 'neutral', None, False, 0.85)
+
+        # Problem report
+        if any(w in msg for w in ['damaged', 'broken', 'wrong item', 'wrong color', 'wrong size',
+                                   'not received', 'didn\'t receive', 'never arrived', 'missing',
+                                   'defective', 'torn', 'ripped']):
+            problem = None
+            if any(w in msg for w in ['damaged', 'broken', 'defective', 'torn', 'ripped']):
+                problem = 'damaged_item'
+            elif any(w in msg for w in ['wrong item', 'wrong color', 'wrong size', 'not what i ordered']):
+                problem = 'wrong_item'
+            elif any(w in msg for w in ['not received', 'didn\'t receive', 'never arrived']):
+                problem = 'not_received'
+            return UserIntent('problem_report', None, [], 'frustrated', problem, False, 0.8)
+
+        # General help
+        if any(w in msg for w in ['help', 'assist', 'support', 'confused']):
+            return UserIntent('general_help', None, [], 'confused', None, False, 0.7)
+
+        return UserIntent('unknown', None, [], 'neutral', None, False, 0.3)
+
+    def _extract_order_id(self, message: str) -> Optional[str]:
+        """Extract order ID from message"""
+        match = self.order_pattern.search(message)
         if match:
             return match.group(1)
-        
-        # Check for just numbers (might be order number)
-        if message.strip().isdigit() and len(message.strip()) >= 5:
-            return message.strip()
-        
+        # Standalone number
+        words = message.strip().split()
+        if len(words) <= 3:
+            m = re.search(r'\b(\d{4,6})\b', message)
+            if m:
+                return m.group(1)
         return None
-    
-    def _detect_primary_intent(self, message_lower: str) -> str:
-        """Detect the main thing user wants to do"""
-        
-        # Order status inquiry
-        if any(phrase in message_lower for phrase in [
-            'where is', 'where\'s', 'kahan hai', 'status', 'track',
-            'when will', 'has it shipped', 'is it shipped'
-        ]):
-            return 'order_status_inquiry'
-        
-        # Order contents
-        if any(phrase in message_lower for phrase in [
-            'what\'s in', 'what is in', 'contents', 'what did i order'
-        ]):
-            return 'order_contents_inquiry'
-        
-        # Cancellation
-        if any(phrase in message_lower for phrase in [
-            'cancel', 'don\'t want', 'stop order'
-        ]):
-            return 'cancel_order'
-        
-        # Refund
-        if any(phrase in message_lower for phrase in [
-            'refund', 'money back', 'get my money'
-        ]):
-            return 'refund_request'
-        
-        # Exchange
-        if any(phrase in message_lower for phrase in [
-            'exchange', 'swap', 'different size', 'different color'
-        ]):
-            return 'exchange_request'
-        
-        # Change address
-        if any(phrase in message_lower for phrase in [
-            'change address', 'update address', 'different address', 'wrong address'
-        ]):
-            return 'change_address'
-        
-        # Problem reports
-        if any(phrase in message_lower for phrase in [
-            'damaged', 'broken', 'defective', 'wrong item', 'not received',
-            'didn\'t receive', 'missing', 'late', 'delayed'
-        ]):
-            return 'problem_report'
-        
-        # Policy questions
-        if any(phrase in message_lower for phrase in [
-            'policy', 'return policy', 'shipping policy', 'how to return',
-            'can i return', 'how much is shipping'
-        ]):
-            return 'policy_inquiry'
-        
-        # Product questions
-        if any(phrase in message_lower for phrase in [
-            'do you have', 'is it available', 'what colors', 'what sizes',
-            'tell me about', 'price', 'cost'
-        ]):
-            return 'product_inquiry'
-        
-        # Help/unclear
-        if any(phrase in message_lower for phrase in [
-            'help', 'assist', 'support'
-        ]):
-            return 'general_help'
-        
-        # Greeting
-        if any(phrase in message_lower for phrase in [
-            'hello', 'hi', 'hey', 'good morning', 'good evening'
-        ]):
-            return 'greeting'
-        
-        # Thanks
-        if any(phrase in message_lower for phrase in [
-            'thank', 'thanks', 'appreciate'
-        ]):
-            return 'gratitude'
-        
-        # Default
-        return 'unknown'
-    
-    def _detect_specific_question(self, message_lower: str, primary_intent: str) -> Optional[str]:
-        """Detect what specifically user wants to know"""
-        
-        if primary_intent == 'order_status_inquiry':
-            # Delivery date
-            if any(phrase in message_lower for phrase in [
-                'when will', 'when does', 'delivery date', 'arrive', 'get it'
-            ]):
-                return 'delivery_date'
-            
-            # Location
-            if any(phrase in message_lower for phrase in [
-                'where is', 'where\'s', 'kahan hai', 'location'
-            ]):
-                return 'current_location'
-            
-            # Tracking
-            if any(phrase in message_lower for phrase in [
-                'track', 'tracking number'
-            ]):
-                return 'tracking_info'
-            
-            # Ship date
-            if any(phrase in message_lower for phrase in [
-                'when was it shipped', 'ship date', 'when did it ship'
-            ]):
-                return 'ship_date'
-            
-            # Order date
-            if any(phrase in message_lower for phrase in [
-                'when did i order', 'when was it placed', 'order date'
-            ]):
-                return 'order_date'
-        
-        return None
-    
-    def _detect_missing_data(self, primary_intent: str, order_number: Optional[str], message_lower: str) -> List[str]:
-        """Detect what information is missing to fulfill the request"""
-        missing = []
-        
-        # Intents that require order number
-        needs_order = [
-            'order_status_inquiry',
-            'order_contents_inquiry',
-            'cancel_order',
-            'refund_request',
-            'exchange_request',
-            'change_address',
-            'problem_report'
-        ]
-        
-        if primary_intent in needs_order and not order_number:
-            missing.append('order_number')
-        
-        # Exchange needs size/color
-        if primary_intent == 'exchange_request':
-            if not any(word in message_lower for word in ['size', 'color', 'colour']):
-                missing.append('exchange_preference')
-        
-        # Refund might need reason
-        if primary_intent == 'refund_request':
-            if not any(word in message_lower for word in ['damaged', 'wrong', 'late', 'don\'t want']):
-                missing.append('reason')
-        
-        return missing
-    
-    def _detect_emotion(self, message_lower: str, conversation_history: List = None) -> str:
-        """Detect user's emotional state"""
-        
-        # Angry/Frustrated
-        if any(phrase in message_lower for phrase in [
-            'ridiculous', 'unacceptable', 'terrible', 'worst', 'awful',
-            'disappointed', 'frustrat', 'angry', 'pissed'
-        ]):
-            return 'frustrated'
-        
-        # Worried/Anxious
-        if any(phrase in message_lower for phrase in [
-            'worried', 'concerned', 'nervous', 'afraid', 'scared'
-        ]):
-            return 'worried'
-        
-        # Urgent
-        if any(phrase in message_lower for phrase in [
-            'urgent', 'asap', 'immediately', 'right now', 'need it tomorrow'
-        ]):
-            return 'urgent'
-        
-        # Happy/Satisfied
-        if any(phrase in message_lower for phrase in [
-            'love', 'great', 'amazing', 'perfect', 'excellent', 'thank'
-        ]):
-            return 'happy'
-        
-        # Confused
-        if any(phrase in message_lower for phrase in [
-            'confused', 'don\'t understand', 'what does', 'not clear'
-        ]):
-            return 'confused'
-        
-        # ALL CAPS = frustrated
-        if any(word.isupper() and len(word) > 3 for word in message_lower.split()):
-            return 'frustrated'
-        
-        return 'neutral'
-    
-    def _detect_problem_type(self, message_lower: str) -> Optional[str]:
-        """Detect if user is reporting a problem"""
-        
-        if any(phrase in message_lower for phrase in [
-            'damaged', 'broken', 'torn', 'ripped', 'defective'
-        ]):
-            return 'damaged_item'
-        
-        if any(phrase in message_lower for phrase in [
-            'wrong item', 'wrong color', 'wrong size', 'different item',
-            'ordered blue', 'ordered black', 'not what i ordered'
-        ]):
-            return 'wrong_item'
-        
-        if any(phrase in message_lower for phrase in [
-            'not received', 'didn\'t receive', 'haven\'t received',
-            'never arrived', 'missing', 'lost'
-        ]):
-            return 'not_received'
-        
-        if any(phrase in message_lower for phrase in [
-            'late', 'delayed', 'overdue', 'taking too long', 'still waiting'
-        ]):
-            return 'delayed'
-        
-        return None
-    
-    def _should_escalate(
-        self, 
-        primary_intent: str, 
-        problem_type: Optional[str],
-        emotion: str,
-        message_lower: str
-    ) -> bool:
-        """
-        Determine if this should be escalated to human
-        IMPORTANT: Escalation should be LAST RESORT, not first action
-        """
-        
-        # User explicitly asks for human
-        if any(phrase in message_lower for phrase in [
-            'speak to human', 'talk to person', 'real person', 'manager',
-            'escalate', 'supervisor'
-        ]):
-            return True
-        
-        # User is very frustrated (multiple indicators)
-        if emotion == 'frustrated':
-            frustration_words = [
-                'ridiculous', 'unacceptable', 'terrible', 'worst',
-                'lawsuit', 'lawyer', 'complaint'
-            ]
-            if sum(1 for word in frustration_words if word in message_lower) >= 2:
-                return True
-        
-        # Critical problems that need human attention
-        critical_problems = ['damaged_item', 'wrong_item', 'not_received']
-        if problem_type in critical_problems:
-            # But ONLY if user seems frustrated or it's been mentioned multiple times
-            if emotion in ['frustrated', 'angry']:
-                return True
-        
-        # Otherwise, try to help first!
-        return False
-    
-    def _calculate_confidence(self, message_lower: str, primary_intent: str) -> float:
-        """Calculate confidence in the intent detection"""
-        
-        # Very short messages are low confidence
-        if len(message_lower.split()) <= 2:
-            return 0.6
-        
-        # Clear keywords = high confidence
-        if primary_intent in ['cancel_order', 'refund_request', 'exchange_request']:
-            return 0.9
-        
-        # Unknown = low confidence
-        if primary_intent == 'unknown':
-            return 0.3
-        
-        return 0.8
-
-
-# Helper function for easy use
-def analyze_intent(user_message: str, context: Dict = None) -> UserIntent:
-    """
-    Convenience function to analyze user intent
-    
-    Usage:
-        intent = analyze_intent("Where is my order 12345?")
-        print(intent.primary_intent)  # 'order_status_inquiry'
-        print(intent.specific_question)  # 'current_location'
-    """
-    classifier = IntentClassifier()
-    return classifier.analyze(user_message, context=context or {})
