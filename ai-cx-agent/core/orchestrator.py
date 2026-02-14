@@ -635,7 +635,7 @@ DATA RULES:
                         + f" × {qty}"
                     )
 
-            shipping = order.get('shipping', {})
+            shipping = order.get('shipping') or {}
             if shipping:
                 if shipping.get('tracking_number'):
                     parts.append(f"  Tracking: {shipping.get('tracking_number')}")
