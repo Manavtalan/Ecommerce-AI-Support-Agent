@@ -229,6 +229,9 @@ def main():
                 import traceback
                 traceback.print_exc()
             
+            # Reset corrupted state so next message works cleanly
+            agent.active_order_id = None
+            agent.pending_intent = None
             print("Let's try again...")
             continue
 
