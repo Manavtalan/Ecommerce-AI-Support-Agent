@@ -105,9 +105,9 @@ class SmartEscalationManager:
         if intent.user_emotion not in ['frustrated', 'angry']:
             return False
 
-        # Angry is already severe on its own
-        if intent.user_emotion == 'angry':
-            return True
+        # Angry alone is NOT enough — need severe keywords too
+        if intent.user_emotion == 'angry' and intent.confidence < 0.5:
+            return False
 
         # Frustrated — check if it's persistent across multiple turns
         if not conversation_history:

@@ -143,9 +143,12 @@ class ConversationOrchestrator:
         detected_emotion, intensity, _ = EmotionDetector.detect_emotion(
             user_message, self.conversation_history
         )
-        if intensity >= 7 and detected_emotion in ['angry', 'sarcastic', 'sad']:
+        if intensity >= 9 and detected_emotion in ['angry', 'sarcastic']:
             intent.user_emotion = detected_emotion
             print(f"   Emotion override: {detected_emotion} (intensity={intensity})")
+        elif detected_emotion == 'sad' and intent.user_emotion == 'neutral':
+            intent.user_emotion = 'sad'
+            print(f"   Emotion override: sad (intensity={intensity})")
 
         # ================================================================
         # BUG 1 FIX: IMMEDIATE ESCALATION CHECK

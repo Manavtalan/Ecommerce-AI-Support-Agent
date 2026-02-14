@@ -134,7 +134,7 @@ VALID INTENTS:
 - product_inquiry: product availability, sizes, colors, prices
 - general_help: confused, needs general assistance
 - gratitude: thank you, thanks, appreciate
-- escalation_request: wants human agent, manager, supervisor
+- escalation_request: EXPLICITLY asks for human agent, manager, or supervisor ("speak to a manager", "talk to a human", "escalate this") — expressing frustration or saying "ridiculous" alone is NOT escalation_request, use frustrated emotion instead
 - out_of_scope: weather, unrelated topics, hacking
 - unknown: truly unclear
 
@@ -144,7 +144,7 @@ PROBLEM TYPES (only for problem_report): damaged_item, wrong_item, not_received,
 
 MISSING DATA RULES:
 - Add "order_number" ONLY if intent needs an order AND no order number exists in message OR context
-- Add "exchange_preference" ONLY if exchange_request AND no size/color mentioned
+- Add "exchange_preference" ONLY if intent is exchange_request (NEVER for problem_report) AND no size/color mentioned
 - NEVER add "reason" for refund_request — customers don't need to justify refunds
 - Do NOT add "order_number" if active_order_id is provided in context
 
@@ -162,11 +162,15 @@ CRITICAL CLASSIFICATION RULES:
 8. "I ordered blue but got red" = problem_report, problem_type: wrong_item
 9. "The package says delivered but I didn't get it" = problem_report, problem_type: not_received
 10. "I want to speak to a manager" = escalation_request
-11. "You're all idiots" = escalation_request + emotion: angry
-12. Sarcasm like "Thanks a lot" after a complaint = frustrated, NOT happy
-13. "What payment methods do you accept?" = policy_inquiry
-14. "Can I change delivery address?" = change_address
-15. If customer is very angry/abusive = needs_escalation: true
+11. "I want to speak to a human" = escalation_request
+12. "You're all idiots" = problem_report + emotion: angry (NOT escalation unless they ask for manager)
+13. "This is ridiculous" = order_status_inquiry + emotion: frustrated (NOT escalation_request)
+14. "This is unacceptable" = emotion: frustrated (NOT escalation_request)
+15. Sarcasm like "Thanks a lot" after a complaint = frustrated, NOT happy
+16. "What payment methods do you accept?" = policy_inquiry
+17. "Can I change delivery address?" = change_address
+18. ONLY use escalation_request when customer EXPLICITLY says manager/human/supervisor/escalate
+19. Frustration words like ridiculous/unacceptable/terrible = frustrated emotion, NOT escalation_request
 
 CONVERSATION HISTORY FOR CONTEXT:
 {history}"""
