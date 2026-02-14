@@ -136,19 +136,7 @@ class ConversationOrchestrator:
         print(f"   Specific: {intent.specific_question}")
         print(f"   Emotion: {intent.user_emotion}")
         print(f"   Missing: {intent.missing_data}")
-        print(f"   Needs escalation: {intent.needs_escalation}")
-
-        # Cross-check with EmotionDetector for emoji/caps signals LLM misses
-        from core.emotion.detector import EmotionDetector
-        detected_emotion, intensity, _ = EmotionDetector.detect_emotion(
-            user_message, self.conversation_history
-        )
-        if intensity >= 9 and detected_emotion in ['angry', 'sarcastic']:
-            intent.user_emotion = detected_emotion
-            print(f"   Emotion override: {detected_emotion} (intensity={intensity})")
-        elif detected_emotion == 'sad' and intent.user_emotion == 'neutral':
-            intent.user_emotion = 'sad'
-            print(f"   Emotion override: sad (intensity={intensity})")
+        print(f"   Needs escalation: {intent.needs_escalation}") 
 
         # ================================================================
         # BUG 1 FIX: IMMEDIATE ESCALATION CHECK
@@ -544,60 +532,122 @@ class ConversationOrchestrator:
             return self._fallback_response(intent, data, analysis)
 
     def _build_system_prompt(self) -> str:
-        """
-        BUG 2 FIX: Human-like system prompt.
-        Explicitly bans corporate filler phrases.
-        Teaches empathy through action, not performative language.
-        """
+        """Loads brand voice from voice_guidelines.yaml for brand-specific responses."""
+        import yaml
+        from pathlib import Path
+
         brand_name = self.brand_config.get('name', 'our company')
 
-        return f"""You are a support agent for {brand_name}.
+        voice = {}
+        voice_path = Path(__file__).parent.parent / \
+            "test_data" / "brands" / "fashionhub" / "voice_guidelines.yaml"
+        try:
+            with open(voice_path, 'r') as f:
+                voice = yaml.safe_load(f)
+        except Exception:
+            pass
 
-YOUR PERSONALITY:
-- Talk like a real person, not a corporate bot
-- Warm and direct — get to the point fast
-- Empathy through ACTIONS, not words
+        forbidden        = voice.get('forbidden_phrases', [])
+        sig              = voice.get('signature_phrases', {})
+        helping_phrases  = sig.get('helping', ["Let's get this sorted", "I'm on it!"])
+        empathy_phrases  = sig.get('empathy', ["I hear you", "That must be frustrating"])
+        closing_phrases  = sig.get('closing', ["Anything else I can help with?"])
+        emoji_g          = voice.get('emoji_guidelines', {})
+        preferred_emojis = " ".join(emoji_g.get('preferred_emojis', ['✨', '📦'])[:6])
+        avoid_emoji_in   = ", ".join(emoji_g.get('avoid_in', ['bad_news', 'serious_issues']))
+        never_emojis     = " ".join(emoji_g.get('never_use', ['😂', '😭']))
+        examples         = voice.get('example_responses', {})
+        greeting_ex      = "\n".join(f'  - "{e}"' for e in list(examples.get('greeting', {}).values())[:2])
+        empathy_ex       = "\n".join(f'  - "{e}"' for e in list(examples.get('empathy_frustrated', {}).values())[:2])
+        policy_ex        = "\n".join(f'  - "{e}"' for e in list(examples.get('policy_explanation', {}).values())[:2])
+        key_facts        = voice.get('key_brand_facts', {})
+        service_block    = "\n".join(f'  - {f}' for f in key_facts.get('service', []))
+        usp_block        = "\n".join(f'  - {u}' for u in key_facts.get('unique_selling_points', []))
+        tone_block       = "\n".join(f'  {k}: {v}' for k, v in voice.get('tone_adjustments', {}).items())
+        forbidden_block  = "\n".join(f'  - "{p}"' for p in forbidden)
+        helping_block    = "\n".join(f'  - "{p}"' for p in helping_phrases)
+        empathy_block    = "\n".join(f'  - "{p}"' for p in empathy_phrases)
+        closing_block    = "\n".join(f'  - "{p}"' for p in closing_phrases[:2])
+        max_words        = voice.get('quality_standards', {}).get('response_length', {}).get('max_words', 80)
+        hinglish_ok      = voice.get('language_handling', {}).get('support_hinglish', True)
+        extra_banned     = [
+            "I completely understand", "I appreciate your patience",
+            "I understand your frustration", "Certainly!", "Absolutely!",
+            "I'd be happy to assist", "I'd be glad to help", "I hope this helps!",
+            "Is there anything else I can help you with today?",
+            "Thank you for reaching out",
+        ]
+        extra_block = "\n".join(f'  - "{p}"' for p in extra_banned)
 
-BANNED PHRASES — never say these, ever:
-- "I completely understand"
-- "I appreciate your patience"
-- "I understand your frustration"
-- "I sincerely apologize for the inconvenience"
-- "Certainly!", "Absolutely!", "Of course!"
-- "Is there anything else I can help you with today?"
-- "Thank you for reaching out to us"
-- "I'd be happy to / I'd be glad to assist"
-- "I hope this helps!"
-- Any phrase that starts with "I completely" or "I truly"
+        return f"""You are a human support agent for {brand_name}.
 
-HOW TO SHOW EMPATHY (through action, not phrases):
-- Wrong: "I completely understand how frustrating this must be"
-- Right: "That's on us — here's what I'm doing to fix it right now"
-- Wrong: "I appreciate your patience while we resolve this"
-- Right: "This should've been sorted already. Let me fix it."
+PERSONALITY:
+- Friendly professional — warm but not fake
+- Direct — lead with the answer, not the acknowledgement
+- Empathy through ACTIONS not performative phrases
+- Conversational, casual, human — not corporate
 
-NATURAL ALTERNATIVES:
-- Use: "Got it", "Sure", "On it", "Makes sense"
-- Use: "That's a mess-up on our end"
-- Use: "Okay so here's what happened..."
-- Use: "This'll take X days — hang tight"
-- Use: "Let me check that for you"
+BANNED PHRASES — NEVER USE:
+From brand guidelines:
+{forbidden_block}
+
+Additional banned:
+{extra_block}
+
+SIGNATURE PHRASES — USE NATURALLY:
+When helping:
+{helping_block}
+
+When showing empathy:
+{empathy_block}
+
+When closing:
+{closing_block}
+
+TONE BY SITUATION:
+{tone_block}
+
+EMOJI RULES:
+Preferred: {preferred_emojis}
+Avoid emojis in: {avoid_emoji_in}
+Never use: {never_emojis}
+Never use 😊 when customer is frustrated or upset
+
+EXAMPLE RESPONSES — learn the voice from these:
+Greetings:
+{greeting_ex}
+
+Frustrated customer:
+{empathy_ex}
+
+Policy explanation:
+{policy_ex}
+
+SPECIAL HANDLING:
+- Damaged item: Lead with solution — offer refund OR replacement immediately
+- Wrong item: Own it — "We sent the wrong item", fast-track the fix
+- Delayed order: Acknowledge briefly, explain reason, give revised ETA
+
+BRAND FACTS — mention when relevant:
+Service:
+{service_block}
+
+Unique selling points:
+{usp_block}
 
 RESPONSE RULES:
-1. Lead with the ANSWER, not with acknowledgement
-2. Be specific — use exact order IDs, dates, tracking numbers from the data
-3. Short answers for simple questions. Longer only when steps are needed.
-4. If offering options, number them: 1. this  2. that
-5. End with ONE clear next step or question — not a generic "anything else?"
-6. Under 200 words unless truly complex
-
-LANGUAGE:
-- If customer writes in Hinglish or Hindi, respond in the same mix naturally
-- Match their energy — chill if they're chill, quick if they're urgent
+1. MAX {max_words} words — be concise
+2. Lead with ANSWER not acknowledgement
+3. Use exact data — order IDs, dates, tracking numbers from the data provided
+4. Number options clearly: 1. this  2. that
+5. End with ONE clear next step — not a generic offer
+6. Use customer's name naturally — not every sentence
+7. {'Mirror Hinglish naturally if customer uses it' if hinglish_ok else 'English only'}
 
 DATA RULES:
-- Only use data provided below — never invent order details or dates
-- If you don't have data, say so directly: "I can't find that order — can you double-check the number?"
+- Only use provided data — never invent order details or dates
+- Order not found: say "I can't find that order — can you double-check the number?"
+- Policy unavailable: give best answer from brand knowledge above
 """
 
     def _build_user_prompt(
