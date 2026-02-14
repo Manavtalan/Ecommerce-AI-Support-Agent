@@ -1,262 +1,228 @@
 """
 Smart Escalation Manager
-Escalation should be LAST RESORT, not first action
-Only escalate when:
-1. User explicitly asks for human
-2. User is very frustrated (multiple angry phrases)
-3. Critical problem AND user is frustrated
+Escalation is LAST RESORT — only when truly needed.
 """
 
-from typing import Dict, Optional
+from typing import Dict, Optional, Tuple
 from core.intelligence.intent_classifier import UserIntent
 
 
 class SmartEscalationManager:
     """
-    Manages escalation decisions intelligently
-    KEY PRINCIPLE: Try to help first, escalate only when necessary
+    Manages escalation decisions intelligently.
+    KEY PRINCIPLE: Try to help first, escalate only when necessary.
     """
-    
+
+    # Abusive language triggers immediate escalation
+    ABUSIVE_WORDS = [
+        'idiot', 'stupid', 'moron', 'useless', 'incompetent',
+        'asshole', 'bastard', 'bitch', 'fuck', 'shit',
+        'lawsuit', 'lawyer', 'sue', 'fraud', 'scam'
+    ]
+
     def __init__(self):
         self.escalation_reasons = []
-        
+
     def should_escalate(
         self,
         intent: UserIntent,
         tool_results: Dict,
         conversation_history: list = None
-    ) -> tuple[bool, Optional[str]]:
+    ) -> Tuple[bool, Optional[str]]:
         """
-        Determine if this conversation should be escalated
-        
-        Returns:
-            (should_escalate: bool, reason: str or None)
+        Determine if this conversation should be escalated.
+
+        Returns: (should_escalate, reason)
         """
-        
-        # Reset reasons
         self.escalation_reasons = []
-        
-        # Check various escalation criteria
-        
-        # 1. User explicitly asks for human
+
+        # 1. User explicitly asked for human / escalation_request intent
         if self._user_requests_human(intent):
-            self.escalation_reasons.append("User requested human agent")
-            return True, "customer_request"
-        
-        # 2. User is severely frustrated
+            return True, "customer_requested"
+
+        # 2. Abusive language detected
+        if self._abusive_language_detected(intent, conversation_history):
+            return True, "abusive_language"
+
+        # 3. Severely frustrated across multiple turns
         if self._user_severely_frustrated(intent, conversation_history):
-            self.escalation_reasons.append("Customer showing high frustration")
             return True, "customer_frustration"
-        
-        # 3. Critical problem + frustration
-        if self._critical_problem_with_frustration(intent):
-            self.escalation_reasons.append("Critical issue with frustrated customer")
+
+        # 4. Critical problem + angry emotion
+        if self._critical_problem_with_anger(intent):
             return True, "critical_issue"
-        
-        # 4. We cannot help (no tools, no data, completely outside scope)
-        if self._cannot_help(intent, tool_results):
-            self.escalation_reasons.append("Unable to assist with available tools")
-            return True, "capability_limitation"
-        
-        # 5. Multiple failed attempts
+
+        # 5. Multiple failed resolution attempts
         if self._multiple_failed_attempts(conversation_history):
-            self.escalation_reasons.append("Multiple unsuccessful resolution attempts")
             return True, "repeated_failure"
-        
-        # Otherwise, DON'T escalate - try to help!
+
         return False, None
-    
+
     def _user_requests_human(self, intent: UserIntent) -> bool:
-        """Check if user explicitly asks for human"""
-        # This is already detected in intent classifier
-        return intent.needs_escalation and "human" in str(intent.primary_intent).lower()
-    
+        """
+        BUG FIX: was checking 'human' in intent.primary_intent
+        but intent is 'escalation_request', not 'human'.
+        Now checks the actual intent value AND needs_escalation flag.
+        """
+        return (
+            intent.primary_intent == 'escalation_request'
+            or intent.needs_escalation
+        )
+
+    def _abusive_language_detected(
+        self,
+        intent: UserIntent,
+        conversation_history: list
+    ) -> bool:
+        """
+        Check for abusive language in the latest message.
+        Triggers immediate escalation.
+        """
+        if not conversation_history:
+            return False
+
+        # Check the most recent user message only
+        # BUG FIX: was using turn.get('user_message') — correct key is 'content'
+        for turn in reversed(conversation_history):
+            if turn.get('role') == 'user':
+                message = turn.get('content', '').lower()
+                return any(word in message for word in self.ABUSIVE_WORDS)
+
+        return False
+
     def _user_severely_frustrated(
         self,
         intent: UserIntent,
         conversation_history: list
     ) -> bool:
         """
-        Check if user is SEVERELY frustrated (not just mildly annoyed)
-        Requires multiple indicators
+        Severely frustrated = angry emotion OR multiple frustration
+        indicators across recent turns.
+
+        BUG FIX: was reading turn.get('user_message') — correct key is 'content'
+        BUG FIX: was only checking emotion == 'frustrated', missed 'angry'
         """
-        
-        if intent.user_emotion != 'frustrated':
+        if intent.user_emotion not in ['frustrated', 'angry']:
             return False
-        
-        # Count frustration indicators in conversation
-        frustration_count = 0
-        
+
+        # Angry is already severe on its own
+        if intent.user_emotion == 'angry':
+            return True
+
+        # Frustrated — check if it's persistent across multiple turns
+        if not conversation_history:
+            return False
+
         severe_words = [
             'ridiculous', 'unacceptable', 'terrible', 'worst',
-            'lawsuit', 'complaint', 'disgusting', 'pathetic'
+            'disgusting', 'pathetic', 'outrageous', 'never again'
         ]
-        
-        if conversation_history:
-            for turn in conversation_history[-3:]:  # Last 3 turns
-                message = turn.get('user_message', '').lower()
-                frustration_count += sum(1 for word in severe_words if word in message)
-        
-        # Only escalate if MULTIPLE severe indicators (2+)
+
+        frustration_count = 0
+        # BUG FIX: correct keys are 'role' and 'content'
+        user_turns = [
+            t for t in conversation_history[-6:]
+            if t.get('role') == 'user'
+        ]
+
+        for turn in user_turns:
+            message = turn.get('content', '').lower()
+            frustration_count += sum(1 for w in severe_words if w in message)
+
         return frustration_count >= 2
-    
-    def _critical_problem_with_frustration(self, intent: UserIntent) -> bool:
+
+    def _critical_problem_with_anger(self, intent: UserIntent) -> bool:
         """
-        Escalate ONLY if:
-        - Critical problem (damaged, wrong item, not received)
-        - AND user is frustrated
+        Escalate if critical problem AND customer is actually angry
+        (not just frustrated — angry is a stronger signal).
         """
-        
         critical_problems = ['damaged_item', 'wrong_item', 'not_received']
-        
         return (
             intent.problem_type in critical_problems
-            and intent.user_emotion in ['frustrated', 'angry']
+            and intent.user_emotion == 'angry'
         )
-    
+
     def _cannot_help(self, intent: UserIntent, tool_results: Dict) -> bool:
-        """
-        Check if we genuinely cannot help
-        This should be RARE - we should almost always be able to help!
-        """
-        
-        # If we have no tools or data for this request
-        # Example: User asks about competitor products, legal advice, etc.
-        
-        # For now, assume we can help with everything in our domain
+        """Reserved — currently we can help with everything in domain"""
         return False
-    
+
     def _multiple_failed_attempts(self, conversation_history: list) -> bool:
         """
-        Escalate if we've tried to help multiple times and failed
+        Escalate after 3+ failed resolution attempts.
+
+        BUG FIX: was reading turn.get('agent_response') — correct key is 'content'
+        Also checks role == 'assistant' before reading content.
         """
-        
-        if not conversation_history or len(conversation_history) < 4:
+        if not conversation_history or len(conversation_history) < 6:
             return False
-        
-        # Count how many times we've asked for clarification or said we can't help
+
         failed_attempts = 0
-        
-        for turn in conversation_history[-4:]:
-            response = turn.get('agent_response', '').lower()
-            if any(phrase in response for phrase in [
-                "i don't understand",
-                "could you clarify",
-                "i'm not sure",
-                "i cannot help"
-            ]):
+        failure_phrases = [
+            "i don't understand",
+            "could you clarify",
+            "i'm not sure",
+            "i cannot help",
+            "can't find",
+            "unable to locate"
+        ]
+
+        # BUG FIX: correct keys
+        assistant_turns = [
+            t for t in conversation_history[-6:]
+            if t.get('role') == 'assistant'
+        ]
+
+        for turn in assistant_turns:
+            response = turn.get('content', '').lower()
+            if any(phrase in response for phrase in failure_phrases):
                 failed_attempts += 1
-        
-        # Escalate after 3+ failed attempts
+
         return failed_attempts >= 3
-    
+
     def get_escalation_message(
         self,
         intent: UserIntent,
         escalation_reason: str
     ) -> str:
         """
-        Generate appropriate escalation message
+        BUG FIX: Removed all banned phrases.
+        - No "I completely understand your frustration"
+        - No "I sincerely apologize for the inconvenience"
+        - Empathy through action, not performative language
         """
-        
-        empathy = ""
-        if intent.user_emotion == 'frustrated':
-            empathy = "I completely understand your frustration, and I'm sorry we couldn't resolve this to your satisfaction. "
-        elif intent.user_emotion == 'worried':
-            empathy = "I understand this is concerning for you. "
-        
-        if escalation_reason == "customer_request":
+
+        if escalation_reason == "customer_requested":
             return (
-                f"{empathy}I'm connecting you with our support team who can provide "
-                "more personalized assistance. They'll be with you shortly!"
+                "Sure — connecting you with our team now. "
+                "They'll pick this up straight away and have full context of our chat."
             )
-        
+
+        elif escalation_reason == "abusive_language":
+            return (
+                "I want to help resolve this, but I need us to keep the conversation respectful. "
+                "I'm connecting you with our senior support team who can take it from here."
+            )
+
         elif escalation_reason == "customer_frustration":
             return (
-                "I sincerely apologize that we haven't been able to resolve this to your satisfaction. "
-                "Let me connect you with a senior support specialist who can give this their immediate attention."
+                "This clearly hasn't been sorted the way it should've been. "
+                "I'm escalating this to our senior team right now — "
+                "they'll reach out to you directly and make it right."
             )
-        
+
         elif escalation_reason == "critical_issue":
             return (
-                f"{empathy}Given the nature of this issue, I want to make sure you get the best possible resolution. "
-                "Let me connect you with our support team who can handle this personally."
+                "Given what's happened here, I'm passing this to our specialist team "
+                "so they can handle it personally and get you a proper resolution fast."
             )
-        
-        elif escalation_reason == "capability_limitation":
-            return (
-                "I want to make sure you get the help you need. Let me connect you with "
-                "a specialist who can assist you better with this specific request."
-            )
-        
+
         elif escalation_reason == "repeated_failure":
             return (
-                "I apologize that I haven't been able to help you effectively so far. "
-                "Let me connect you with our support team who can provide more comprehensive assistance."
+                "I haven't been able to sort this the way I should have. "
+                "Connecting you with our team now — they'll take it from here."
             )
-        
+
         else:
             return (
-                "Let me connect you with our support team who can assist you further."
+                "Connecting you with our support team who can help further."
             )
-    
-    def should_try_to_help_first(self, intent: UserIntent) -> bool:
-        """
-        Determine if we should attempt to help before escalating
-        Returns True for most cases - we want to try helping!
-        """
-        
-        # We should try to help for these intents
-        helpful_intents = [
-            'order_status_inquiry',
-            'order_contents_inquiry',
-            'cancel_order',
-            'refund_request',
-            'exchange_request',
-            'change_address',
-            'problem_report',
-            'policy_inquiry',
-            'product_inquiry'
-        ]
-        
-        return intent.primary_intent in helpful_intents
-    
-    def get_help_attempt_context(self, intent: UserIntent) -> Dict[str, str]:
-        """
-        Get context for attempting to help
-        Returns what the agent should try to do before escalating
-        """
-        
-        if intent.primary_intent == 'cancel_order':
-            return {
-                'action': 'check_order_status',
-                'help_message': 'Check if order shipped. If not, cancel it. If yes, offer refuse delivery or return options.'
-            }
-        
-        elif intent.primary_intent == 'refund_request':
-            return {
-                'action': 'check_order_status',
-                'help_message': 'Explain refund process based on order status. Guide through return if needed.'
-            }
-        
-        elif intent.primary_intent == 'problem_report':
-            return {
-                'action': 'offer_solution',
-                'help_message': 'Show high empathy, offer replacement or refund. Only escalate if customer insists.'
-            }
-        
-        return {}
-
-
-# Convenience function
-def check_escalation(intent: UserIntent, tool_results: Dict, history: list = None) -> tuple[bool, Optional[str]]:
-    """
-    Convenience function to check if escalation is needed
-    
-    Usage:
-        should_escalate, reason = check_escalation(intent, tool_results, history)
-        if should_escalate:
-            return escalation_message
-    """
-    manager = SmartEscalationManager()
-    return manager.should_escalate(intent, tool_results, history)
