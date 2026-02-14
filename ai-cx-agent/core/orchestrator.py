@@ -90,10 +90,11 @@ class ConversationOrchestrator:
         Flow:
         1. Extract any order number from message
         2. Understand intent (with full context awareness)
-        3. Gather needed data (order + policy)
-        4. Analyze situation
-        5. Generate helpful response
-        6. Check if escalation needed
+        3. [NEW] Immediate escalation check — no data gathering needed
+        4. Gather needed data (order + policy)
+        5. Analyze situation
+        6. Generate helpful response
+        7. Check smart escalation (emotion-based, repeated failures)
         """
 
         self.stats['messages_processed'] += 1
@@ -111,15 +112,12 @@ class ConversationOrchestrator:
         print(f"{'='*70}\n")
 
         # === CRITICAL: EXTRACT ORDER NUMBER FIRST ===
-        # Do this BEFORE intent classification so context is available
         extracted_order_id = self._extract_order_id_from_message(user_message)
         if extracted_order_id:
             self.active_order_id = extracted_order_id
             print(f"📌 Order ID captured: {self.active_order_id}")
 
         # === CRITICAL: HANDLE CONTEXT REPLY ===
-        # User replied with just an order number or short answer
-        # after agent asked for more info
         context_response = self._check_if_context_reply(user_message)
         if context_response:
             print(f"🔄 Context reply detected - resuming pending intent")
@@ -138,20 +136,30 @@ class ConversationOrchestrator:
         print(f"   Specific: {intent.specific_question}")
         print(f"   Emotion: {intent.user_emotion}")
         print(f"   Missing: {intent.missing_data}")
+        print(f"   Needs escalation: {intent.needs_escalation}")
+
+        # ================================================================
+        # BUG 1 FIX: IMMEDIATE ESCALATION CHECK
+        # escalation_request must short-circuit here — before data gathering
+        # ================================================================
+        if intent.primary_intent == 'escalation_request' or intent.needs_escalation:
+            print(f"   🚨 IMMEDIATE ESCALATION — intent: {intent.primary_intent}")
+            self.stats['escalations'] += 1
+            response = self.smart_escalation.get_escalation_message(
+                intent=intent,
+                escalation_reason='customer_requested' if intent.primary_intent == 'escalation_request'
+                else 'high_emotion'
+            )
+            return self._finalize_response(response, intent, {})
 
         # === STEP 2: HANDLE MISSING DATA ===
-        # Only ask for order number if we truly don't have it
         if intent.missing_data:
-            # Double check - do we already have order ID in context?
             if 'order_number' in intent.missing_data and self.active_order_id:
-                # We have it! Remove from missing
                 intent.missing_data.remove('order_number')
                 print(f"   ✅ Order ID from context: {self.active_order_id}")
 
-            # Still missing data?
             if intent.missing_data:
                 print(f"   ⚠️  Still missing: {intent.missing_data}")
-                # Store pending intent so we can resume after user provides info
                 self.pending_intent = intent
                 response = self._handle_missing_data(intent, user_message)
                 return self._finalize_response(response, intent, {})
@@ -170,8 +178,8 @@ class ConversationOrchestrator:
         print(f"   Can help: {analysis['can_help_directly']}")
         print(f"   Action: {analysis['recommended_action']}")
 
-        # === STEP 5: CHECK ESCALATION ===
-        print(f"\n🚨 STEP 4: Checking escalation...")
+        # === STEP 5: SMART ESCALATION CHECK (emotion/failure-based) ===
+        print(f"\n🚨 STEP 4: Checking smart escalation...")
 
         should_escalate, escalation_reason = self.smart_escalation.should_escalate(
             intent=intent,
@@ -180,7 +188,7 @@ class ConversationOrchestrator:
         )
 
         if should_escalate:
-            print(f"   ⚠️  ESCALATION: {escalation_reason}")
+            print(f"   ⚠️  SMART ESCALATION: {escalation_reason}")
             self.stats['escalations'] += 1
             response = self.smart_escalation.get_escalation_message(
                 intent=intent,
@@ -188,7 +196,7 @@ class ConversationOrchestrator:
             )
             return self._finalize_response(response, intent, data)
 
-        print(f"   ✅ No escalation - agent will help")
+        print(f"   ✅ No escalation needed")
 
         # === STEP 6: GENERATE INTELLIGENT RESPONSE ===
         print(f"\n✨ STEP 5: Generating response...")
@@ -208,20 +216,11 @@ class ConversationOrchestrator:
         return self._finalize_response(response, intent, data)
 
     def _extract_order_id_from_message(self, message: str) -> Optional[str]:
-        """
-        Extract order ID from message - handles multiple formats:
-        - "order 12345"
-        - "order #12345"
-        - "#12345"
-        - just "12345" (5 digit number)
-        - "order id: 12345"
-        - "order number 12345"
-        """
-        # Pattern 1: explicit order reference
+        """Extract order ID from message - handles multiple formats"""
         patterns = [
-            r'order\s*(?:id|number|#)?\s*:?\s*#?(\d{4,6})',  # "order 12345", "order id: 12345"
-            r'#(\d{4,6})',  # "#12345"
-            r'\border\b.*?(\d{4,6})',  # "my order 12345"
+            r'order\s*(?:id|number|#)?\s*:?\s*#?(\d{4,6})',
+            r'#(\d{4,6})',
+            r'\border\b.*?(\d{4,6})',
         ]
 
         for pattern in patterns:
@@ -229,9 +228,8 @@ class ConversationOrchestrator:
             if match:
                 return match.group(1)
 
-        # Pattern 2: standalone number (only if short message suggesting it's an order reply)
         words = message.strip().split()
-        if len(words) <= 3:  # Short message
+        if len(words) <= 3:
             standalone = re.search(r'\b(\d{4,6})\b', message)
             if standalone:
                 return standalone.group(1)
@@ -239,25 +237,16 @@ class ConversationOrchestrator:
         return None
 
     def _check_if_context_reply(self, message: str) -> Optional[str]:
-        """
-        Check if user is replying to a question the agent asked.
-        Returns the type of context reply, or None.
-
-        Examples:
-        - Agent asked "What's your order number?" → User replies "12345"
-        - Agent asked "What size?" → User replies "Large"
-        """
+        """Check if user is replying to a question the agent asked"""
         if not self.pending_intent:
             return None
 
         message_stripped = message.strip()
 
-        # Check if this looks like an order number reply
         if re.match(r'^#?\d{4,6}$', message_stripped):
             if 'order_number' in self.pending_intent.missing_data:
                 return 'order_number_reply'
 
-        # Check if this looks like a size reply
         size_patterns = ['xs', 'xm', 'xl', 'xxl', 'small', 'medium', 'large',
                          'extra small', 'extra large', 's', 'm', 'l']
         if message_stripped.lower() in size_patterns:
@@ -267,24 +256,17 @@ class ConversationOrchestrator:
         return None
 
     def _handle_context_reply(self, message: str, reply_type: str) -> Tuple[str, Dict]:
-        """
-        Handle when user replies to agent's question with missing data.
-        Resumes the pending intent with the new information.
-        """
+        """Handle when user replies with missing data — resumes pending intent"""
         intent = self.pending_intent
-        self.pending_intent = None  # Clear pending
+        self.pending_intent = None
 
         if reply_type == 'order_number_reply':
-            # Extract and store order number
             order_id = re.search(r'\d{4,6}', message).group()
             self.active_order_id = order_id
             print(f"   ✅ Got order number from reply: {order_id}")
-
-            # Remove from missing data and continue
             if 'order_number' in intent.missing_data:
                 intent.missing_data.remove('order_number')
 
-        # Now gather data and continue normally
         data = self._gather_data(intent, message)
         analysis = self._analyze_situation(intent, data)
 
@@ -302,7 +284,6 @@ class ConversationOrchestrator:
                 self.stats['direct_help'] += 1
             if data.get('policy'):
                 self.stats['policies_used'] += 1
-
             response = self._generate_intelligent_response(
                 intent=intent,
                 data=data,
@@ -315,20 +296,34 @@ class ConversationOrchestrator:
     def _gather_data(self, intent: UserIntent, user_message: str) -> Dict:
         """
         Gather all data needed for this intent.
-        Always fetches BOTH order data AND relevant policy together.
+
+        BUG 3 FIX: Always fetch order data if active_order_id exists,
+        regardless of intent. Unknown/unclear intents with an order ID
+        should still get order context.
         """
         data = {}
 
-        needs_order = intent.primary_intent in [
+        # Intents that explicitly need order data
+        order_intents = {
             'order_status_inquiry', 'order_contents_inquiry',
             'cancel_order', 'refund_request', 'exchange_request',
             'change_address', 'problem_report', 'return_request'
-        ]
+        }
 
-        needs_policy = intent.primary_intent in [
+        policy_intents = {
             'cancel_order', 'refund_request', 'return_request',
             'exchange_request', 'policy_inquiry', 'problem_report'
-        ]
+        }
+
+        # BUG 3 FIX: fetch order if explicit intent needs it OR
+        # if we have an active order ID (customer already gave it to us)
+        needs_order = (
+            intent.primary_intent in order_intents
+            or (self.active_order_id is not None and intent.primary_intent == 'unknown')
+            or (self.active_order_id is not None and intent.primary_intent == 'general_help')
+        )
+
+        needs_policy = intent.primary_intent in policy_intents
 
         # === GET ORDER DATA ===
         if needs_order and self.active_order_id:
@@ -367,7 +362,6 @@ class ConversationOrchestrator:
 
     def _build_policy_query(self, intent: UserIntent) -> str:
         """Build appropriate policy search query based on intent"""
-
         problem_queries = {
             'damaged_item': 'damaged defective product refund replacement policy',
             'wrong_item': 'wrong incorrect item received policy',
@@ -393,25 +387,21 @@ class ConversationOrchestrator:
     def _analyze_situation(self, intent: UserIntent, data: Dict) -> Dict:
         """
         Analyze the situation intelligently based on order status + policy.
-        Returns what action to take and what options are available.
         """
-
         analysis = {
-            'can_help_directly': True,  # Default to CAN help
+            'can_help_directly': True,
             'recommended_action': 'provide_info',
             'options': [],
             'reasoning': '',
             'order_status': None
         }
 
-        # Get order status if available
         if data.get('order'):
             order_status = data['order'].get('status', '').lower()
             analysis['order_status'] = order_status
         else:
             order_status = None
 
-        # === CANCELLATION ===
         if intent.primary_intent == 'cancel_order':
             if not order_status:
                 analysis['recommended_action'] = 'ask_order_status'
@@ -432,12 +422,11 @@ class ConversationOrchestrator:
                 ]
                 analysis['reasoning'] = 'Already shipped - offer alternatives'
 
-            elif order_status in ['delivered']:
+            elif order_status == 'delivered':
                 analysis['recommended_action'] = 'delivered_return'
                 analysis['options'] = ['Return within 30 days for full refund']
                 analysis['reasoning'] = 'Delivered - guide to return process'
 
-        # === RETURN ===
         elif intent.primary_intent in ['return_request', 'refund_request']:
             analysis['recommended_action'] = 'guide_return'
             analysis['options'] = [
@@ -447,7 +436,6 @@ class ConversationOrchestrator:
             ]
             analysis['reasoning'] = 'Can process return/refund'
 
-        # === EXCHANGE ===
         elif intent.primary_intent == 'exchange_request':
             analysis['recommended_action'] = 'guide_exchange'
             analysis['options'] = [
@@ -456,7 +444,6 @@ class ConversationOrchestrator:
             ]
             analysis['reasoning'] = 'Can process exchange'
 
-        # === PROBLEM REPORT ===
         elif intent.primary_intent == 'problem_report':
             if intent.problem_type == 'damaged_item':
                 analysis['recommended_action'] = 'damaged_resolution'
@@ -486,7 +473,6 @@ class ConversationOrchestrator:
                 analysis['recommended_action'] = 'investigate_problem'
                 analysis['reasoning'] = 'General problem - gather details'
 
-        # === ORDER STATUS ===
         elif intent.primary_intent == 'order_status_inquiry':
             if data.get('order'):
                 analysis['recommended_action'] = 'provide_status'
@@ -496,7 +482,6 @@ class ConversationOrchestrator:
                 analysis['can_help_directly'] = False
                 analysis['reasoning'] = 'Order not found'
 
-        # === ORDER CONTENTS ===
         elif intent.primary_intent == 'order_contents_inquiry':
             if data.get('order'):
                 analysis['recommended_action'] = 'list_contents'
@@ -504,16 +489,14 @@ class ConversationOrchestrator:
             else:
                 analysis['can_help_directly'] = False
 
-        # === POLICY QUESTION ===
         elif intent.primary_intent == 'policy_inquiry':
             if data.get('policy'):
                 analysis['recommended_action'] = 'explain_policy'
                 analysis['reasoning'] = 'Policy data available'
             else:
                 analysis['recommended_action'] = 'general_policy'
-                analysis['reasoning'] = 'Give general policy info'
+                analysis['reasoning'] = 'Give general policy info from training'
 
-        # === GREETING / GRATITUDE ===
         elif intent.primary_intent in ['greeting', 'gratitude', 'general_help']:
             analysis['recommended_action'] = intent.primary_intent
             analysis['reasoning'] = 'Social interaction'
@@ -527,9 +510,7 @@ class ConversationOrchestrator:
         analysis: Dict,
         user_message: str
     ) -> str:
-        """
-        Generate natural, helpful response using LLM with full context.
-        """
+        """Generate natural, helpful response using LLM with full context"""
 
         system_prompt = self._build_system_prompt()
         user_prompt = self._build_user_prompt(intent, data, analysis, user_message)
@@ -551,29 +532,61 @@ class ConversationOrchestrator:
             return self._fallback_response(intent, data, analysis)
 
     def _build_system_prompt(self) -> str:
-        """Build system prompt for LLM"""
+        """
+        BUG 2 FIX: Human-like system prompt.
+        Explicitly bans corporate filler phrases.
+        Teaches empathy through action, not performative language.
+        """
         brand_name = self.brand_config.get('name', 'our company')
-        tone = self.brand_config.get('voice', {}).get('tone', 'friendly and professional')
 
-        return f"""You are an intelligent customer support agent for {brand_name}.
+        return f"""You are a support agent for {brand_name}.
 
-CORE MISSION: Help customers resolve their issues using real order data and policy information.
+YOUR PERSONALITY:
+- Talk like a real person, not a corporate bot
+- Warm and direct — get to the point fast
+- Empathy through ACTIONS, not words
 
-CRITICAL RULES:
-1. Use ONLY the data provided - never invent order details, dates, or policies
-2. Be SPECIFIC - use exact order IDs, dates, tracking numbers from the data
-3. Be HELPFUL - explain what you CAN do, offer options, guide next steps
-4. Be EMPATHETIC - acknowledge frustration before providing solutions
-5. Be CONCISE - answer what was asked, don't dump all available data
-6. Use policy information to EXPLAIN options, not just say "contact support"
+BANNED PHRASES — never say these, ever:
+- "I completely understand"
+- "I appreciate your patience"
+- "I understand your frustration"
+- "I sincerely apologize for the inconvenience"
+- "Certainly!", "Absolutely!", "Of course!"
+- "Is there anything else I can help you with today?"
+- "Thank you for reaching out to us"
+- "I'd be happy to / I'd be glad to assist"
+- "I hope this helps!"
+- Any phrase that starts with "I completely" or "I truly"
 
-RESPONSE FORMAT:
-- If customer is frustrated: Start with empathy, then solution
-- If offering options: Number them clearly (1. option one  2. option two)
-- Always end with a clear next step or question
-- Keep response under 200 words unless detail is truly needed
+HOW TO SHOW EMPATHY (through action, not phrases):
+- Wrong: "I completely understand how frustrating this must be"
+- Right: "That's on us — here's what I'm doing to fix it right now"
+- Wrong: "I appreciate your patience while we resolve this"
+- Right: "This should've been sorted already. Let me fix it."
 
-Brand tone: {tone}"""
+NATURAL ALTERNATIVES:
+- Use: "Got it", "Sure", "On it", "Makes sense"
+- Use: "That's a mess-up on our end"
+- Use: "Okay so here's what happened..."
+- Use: "This'll take X days — hang tight"
+- Use: "Let me check that for you"
+
+RESPONSE RULES:
+1. Lead with the ANSWER, not with acknowledgement
+2. Be specific — use exact order IDs, dates, tracking numbers from the data
+3. Short answers for simple questions. Longer only when steps are needed.
+4. If offering options, number them: 1. this  2. that
+5. End with ONE clear next step or question — not a generic "anything else?"
+6. Under 200 words unless truly complex
+
+LANGUAGE:
+- If customer writes in Hinglish or Hindi, respond in the same mix naturally
+- Match their energy — chill if they're chill, quick if they're urgent
+
+DATA RULES:
+- Only use data provided below — never invent order details or dates
+- If you don't have data, say so directly: "I can't find that order — can you double-check the number?"
+"""
 
     def _build_user_prompt(
         self,
@@ -586,21 +599,18 @@ Brand tone: {tone}"""
 
         parts = []
 
-        # Customer's message
         parts.append(f"CUSTOMER MESSAGE: \"{user_message}\"")
         parts.append("")
 
-        # Intent analysis
         parts.append(f"INTENT: {intent.primary_intent}")
         if intent.specific_question:
             parts.append(f"SPECIFIC QUESTION: {intent.specific_question}")
         if intent.user_emotion and intent.user_emotion != 'neutral':
-            parts.append(f"EMOTION: {intent.user_emotion} ← Show empathy first!")
+            parts.append(f"EMOTION: {intent.user_emotion} — show empathy through action, not phrases")
         if intent.problem_type:
             parts.append(f"PROBLEM TYPE: {intent.problem_type}")
         parts.append("")
 
-        # Order data - structured and clean
         if data.get('order'):
             order = data['order']
             parts.append("ORDER DATA:")
@@ -617,11 +627,13 @@ Brand tone: {tone}"""
                     color = item.get('color', '')
                     size = item.get('size', '')
                     qty = item.get('quantity', 1)
-                    parts.append(f"    • {name}"
-                                 + (f" ({color}" if color else "")
-                                 + (f", Size {size}" if size else "")
-                                 + (f")" if color or size else "")
-                                 + f" × {qty}")
+                    parts.append(
+                        f"    • {name}"
+                        + (f" ({color}" if color else "")
+                        + (f", Size {size}" if size else "")
+                        + (f")" if color or size else "")
+                        + f" × {qty}"
+                    )
 
             shipping = order.get('shipping', {})
             if shipping:
@@ -637,11 +649,9 @@ Brand tone: {tone}"""
                     parts.append(f"  Last Update: {shipping.get('last_update')}")
             parts.append("")
 
-        # Policy data - extract text cleanly
         if data.get('policy'):
             policy = data['policy']
             parts.append("RELEVANT POLICY:")
-
             if isinstance(policy, dict) and 'results' in policy:
                 for result in policy['results'][:2]:
                     text = result.get('text', '').strip()
@@ -651,7 +661,6 @@ Brand tone: {tone}"""
                 parts.append(f"  {policy[:400]}")
             parts.append("")
 
-        # Situation analysis
         parts.append("SITUATION:")
         parts.append(f"  Action: {analysis['recommended_action']}")
         if analysis.get('options'):
@@ -661,7 +670,6 @@ Brand tone: {tone}"""
         parts.append(f"  Reasoning: {analysis['reasoning']}")
         parts.append("")
 
-        # Specific instruction
         parts.append("YOUR TASK:")
         parts.append(self._get_task_instruction(intent, analysis))
 
@@ -673,94 +681,86 @@ Brand tone: {tone}"""
         action = analysis['recommended_action']
 
         instructions = {
-            # Greetings
-            'greeting': "Greet the customer warmly and ask how you can help them today.",
-            'gratitude': "Respond warmly to their thanks and invite further questions.",
+            'greeting': "Greet them briefly and ask what they need help with. One sentence max.",
+            'gratitude': "Acknowledge their thanks naturally in one line and invite further questions.",
             'general_help': "Ask what they need help with today.",
 
-            # Order status
             'provide_status': (
-                f"Answer their specific question about the order using EXACT data provided. "
-                f"If they asked about delivery date, give ONLY the date. "
-                f"If they asked where it is, give the current location. "
-                f"Don't dump all order info - answer what they actually asked."
+                "Answer their specific question using EXACT data provided. "
+                "If they asked about delivery date, give ONLY the date. "
+                "If they asked where it is, give current location. "
+                "Don't dump all order info — answer what they actually asked."
             ),
             'list_contents': "List the items in their order with color, size, quantity details.",
-            'order_not_found': "Apologize that you couldn't find the order and ask them to verify the number.",
+            'order_not_found': (
+                "Tell them directly you couldn't find that order and ask them "
+                "to double-check the order number from their confirmation email."
+            ),
 
-            # Cancellation
             'can_cancel': (
-                "Tell them the good news - you CAN cancel it since it hasn't shipped yet. "
-                "Explain the refund timeline from the policy. Ask if they want to proceed."
+                "Tell them you can cancel it since it hasn't shipped. "
+                "Give the refund timeline. Ask if they want to go ahead."
             ),
             'shipped_alternatives': (
-                "Explain you can't cancel since it's already shipped, "
-                "but present the alternatives clearly with full details from the policy. "
-                "Ask which option they prefer."
+                "Tell them it's already shipped so cancellation isn't possible anymore, "
+                "but give them the two alternatives clearly with details. "
+                "Ask which they prefer."
             ),
             'delivered_return': (
-                "Explain it's been delivered so cancellation isn't possible, "
-                "but guide them through the return process using the policy details."
+                "It's already delivered so cancellation isn't an option, "
+                "but walk them through the return process. Make it sound easy."
             ),
 
-            # Returns & refunds
             'guide_return': (
-                "Walk them through exactly how to return their item step by step. "
-                "Use the policy to explain the timeline and any requirements. "
+                "Walk them through how to return step by step. "
+                "Be specific about timeline and what they need to do. "
                 "Offer to send a return label."
             ),
 
-            # Exchange
             'guide_exchange': (
-                "Explain how the exchange process works using the policy. "
-                "Ask what size or color they want. Make it sound easy and hassle-free."
+                "Explain how exchange works, keep it simple. "
+                "Ask what size or color they want if not already told."
             ),
 
-            # Problems
             'damaged_resolution': (
-                "Start with a genuine apology for receiving a damaged item. "
-                "Present both options (refund or replacement) clearly. "
-                "Use the policy to confirm what they're entitled to. "
-                "Ask which they prefer and say you'll action it immediately."
+                "Don't start with a long apology — start with the solution. "
+                "Give them both options (refund or replacement) and ask which they want. "
+                "You'll action it immediately."
             ),
             'wrong_item_resolution': (
-                "Sincerely apologize for sending the wrong item - it's our mistake. "
-                "Tell them you'll send the correct item right away. "
-                "Explain they can keep or return the wrong item per the policy."
+                "Own the mistake directly — we sent the wrong item. "
+                "Tell them you'll send the correct one right away. "
+                "Explain what happens with the wrong item."
             ),
             'missing_package': (
-                "Show empathy and take the issue seriously. "
-                "Suggest checking with neighbors/building reception first. "
-                "Explain you'll file a claim and offer replacement or refund. "
-                "Ask if they've checked nearby locations."
+                "Take it seriously. Suggest checking with neighbours/building reception. "
+                "Tell them you'll file a claim and offer replacement or refund. "
+                "Ask if they've checked nearby."
             ),
             'investigate_problem': (
-                "Show empathy and ask for more details about what went wrong "
-                "so you can find the best resolution for them."
+                "Ask for details about what went wrong so you can find the best fix."
             ),
 
-            # Policy
             'explain_policy': (
-                "Answer their policy question directly and clearly using the policy data provided. "
-                "Give specific details (timeframes, conditions, process steps). "
-                "Don't just summarize - give them actionable information."
+                "Answer the policy question directly using the policy data provided. "
+                "Give specific timeframes, conditions, process steps. "
+                "Be actionable, not just descriptive."
             ),
             'general_policy': (
-                "Give them helpful information about the policy from your knowledge. "
-                "Be specific about timeframes and processes."
+                "Answer from your knowledge about FashionHub policies. "
+                "Be specific about timeframes and how it works."
             ),
 
-            # Default
-            'provide_info': "Provide the most helpful response you can with the available information.",
+            'provide_info': "Give the most helpful response you can with what's available.",
         }
 
         return instructions.get(
             action,
-            "Provide a helpful, accurate response using the data available. Be specific and actionable."
+            "Give a helpful, accurate response using available data. Be specific and direct."
         )
 
     def _fallback_response(self, intent: UserIntent, data: Dict, analysis: Dict) -> str:
-        """Fallback when LLM fails - still intelligent based on context"""
+        """Fallback when LLM fails"""
 
         if data.get('order'):
             order = data['order']
@@ -768,47 +768,39 @@ Brand tone: {tone}"""
             order_id = order.get('order_id', '')
             return (
                 f"Your order #{order_id} is currently {status}. "
-                f"If you need more help with this order, I'm here to assist!"
+                f"What else can I help you with?"
             )
 
-        if intent.user_emotion == 'frustrated':
+        if intent.user_emotion in ['frustrated', 'angry']:
             return (
-                "I understand your frustration and I sincerely want to help. "
-                "Let me connect you with our support team who can resolve this right away."
+                "Something went wrong on my end — let me get you to our team "
+                "who can sort this out straight away."
             )
 
-        return (
-            "I want to make sure you get accurate help. "
-            "Could you provide a bit more detail about what you need?"
-        )
+        return "Could you give me a bit more detail so I can help you properly?"
 
     def _handle_missing_data(self, intent: UserIntent, user_message: str) -> str:
-        """Handle missing data - ask for what we need"""
+        """Handle missing data — ask for what we need"""
 
         if 'order_number' in intent.missing_data:
-            # Tailor question to their intent
             intent_context = {
-                'cancel_order': 'cancel',
+                'cancel_order': 'cancel that for you',
                 'refund_request': 'process your refund',
                 'return_request': 'help with the return',
-                'exchange_request': 'process the exchange',
-                'order_status_inquiry': 'check the status',
-                'problem_report': 'resolve this issue'
+                'exchange_request': 'sort the exchange',
+                'order_status_inquiry': 'check that',
+                'problem_report': 'sort this out'
             }
             action = intent_context.get(intent.primary_intent, 'help you')
             return (
-                f"I'd be happy to {action} for you! 😊\n\n"
-                f"Could you please share your order number? "
-                f"You can find it in your confirmation email - it looks like #12345."
+                f"Sure, I can {action} — what's your order number? "
+                f"You'll find it in your confirmation email, looks like #12345."
             )
 
         if 'exchange_preference' in intent.missing_data:
-            return (
-                "I can help you with the exchange! 😊\n\n"
-                "What size or color would you like to exchange it for?"
-            )
+            return "What size or color would you like to exchange it for?"
 
-        return "I'd be happy to help! Could you provide a bit more detail?"
+        return "Could you give me a bit more detail so I can help?"
 
     def _finalize_response(
         self,
