@@ -136,8 +136,8 @@ class ConversationOrchestrator:
         print(f"   Specific: {intent.specific_question}")
         print(f"   Emotion: {intent.user_emotion}")
         print(f"   Missing: {intent.missing_data}")
-        print(f"   Needs escalation: {intent.needs_escalation}") 
-
+        print(f"   Needs escalation: {intent.needs_escalation}")
+        
         # ================================================================
         # BUG 1 FIX: IMMEDIATE ESCALATION CHECK
         # escalation_request must short-circuit here — before data gathering
