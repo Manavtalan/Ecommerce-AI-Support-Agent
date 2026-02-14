@@ -138,6 +138,15 @@ class ConversationOrchestrator:
         print(f"   Missing: {intent.missing_data}")
         print(f"   Needs escalation: {intent.needs_escalation}")
 
+        # Cross-check with EmotionDetector for emoji/caps signals LLM misses
+        from core.emotion.detector import EmotionDetector
+        detected_emotion, intensity, _ = EmotionDetector.detect_emotion(
+            user_message, self.conversation_history
+        )
+        if intensity >= 7 and detected_emotion in ['angry', 'sarcastic', 'sad']:
+            intent.user_emotion = detected_emotion
+            print(f"   Emotion override: {detected_emotion} (intensity={intensity})")
+
         # ================================================================
         # BUG 1 FIX: IMMEDIATE ESCALATION CHECK
         # escalation_request must short-circuit here — before data gathering
