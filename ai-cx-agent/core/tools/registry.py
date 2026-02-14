@@ -42,7 +42,7 @@ class ToolRegistry:
             "search_knowledge": {
                 "function": search_knowledge,
                 "description": "Search knowledge base for policies and info",
-                "parameters": ["query", "brand_id"],
+                "parameters": ["query", "brand_name"],
                 "keywords": ["policy", "return", "refund", "exchange", "shipping", "warranty", "cancel"]
             },
             "get_product_info": {

@@ -375,7 +375,7 @@ class ConversationOrchestrator:
             'return_request': 'return policy how to return item',
             'exchange_request': 'exchange policy size color change swap',
             'change_address': 'change delivery address policy',
-            'policy_inquiry': 'general policies shipping return refund',
+            'policy_inquiry': intent.specific_question or 'general policies shipping return refund',
             'problem_report': problem_queries.get(
                 intent.problem_type,
                 'customer support problem resolution policy'
