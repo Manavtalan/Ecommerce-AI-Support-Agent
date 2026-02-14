@@ -195,17 +195,17 @@ class BrandLoader:
         # Add shipping info if available
         if "shipping" in order:
             shipping = order["shipping"]
-            facts["courier"] = shipping.get("courier", "")
-            facts["tracking_number"] = shipping.get("tracking_number", "")
-            facts["tracking_url"] = shipping.get("tracking_url", "")
-            facts["estimated_delivery"] = shipping.get("estimated_delivery", "")
-            facts["current_location"] = shipping.get("current_location", "")
+            facts["courier"] = (shipping or {}).get("courier", "")
+            facts["tracking_number"] = (shipping or {}).get("tracking_number", "")
+            facts["tracking_url"] = (shipping or {}).get("tracking_url", "")
+            facts["estimated_delivery"] = (shipping or {}).get("estimated_delivery", "")
+            facts["current_location"] = (shipping or {}).get("current_location", "")
             
             # Add delay info if present
-            if shipping.get("delay_reason"):
+            if (shipping or {}).get("delay_reason"):
                 facts["status"] = "delayed"
                 facts["delay_reason"] = shipping["delay_reason"]
-                facts["revised_eta"] = shipping.get("revised_eta", "")
+                facts["revised_eta"] = (shipping or {}).get("revised_eta", "")
         
         # Add items info
         if "items" in order:
