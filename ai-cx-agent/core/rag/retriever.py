@@ -95,12 +95,13 @@ class KnowledgeRetriever:
         # Format results (note: results.points not just results)
         formatted_results = []
         for result in results.points:
+            payload = result.payload or {}
             formatted_results.append({
-                "text": result.payload["text"],
+                "text": payload.get("text", ""),
                 "score": result.score,
-                "source": result.payload["source"],
-                "category": result.payload["category"],
-                "chunk_index": result.payload["chunk_index"]
+                "source": payload.get("source", ""),
+                "category": payload.get("category", ""),
+                "chunk_index": payload.get("chunk_index", 0)
             })
         
         return formatted_results

@@ -47,7 +47,9 @@ class BrandRegistry:
         """Load brand configuration from YAML file"""
         with open(config_file, 'r') as f:
             config = yaml.safe_load(f)
-        
+
+        config = config or {}
+
         # Set defaults
         config.setdefault("brand_id", config_file.parent.name)
         config.setdefault("name", config_file.parent.name.title())

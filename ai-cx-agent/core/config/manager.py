@@ -273,83 +273,9 @@ class ConfigManager:
 # Global config instance
 config = ConfigManager()
 
-
-# Testing function
-def test_config_manager():
-    """Test configuration manager"""
-    print("🧪 TESTING CONFIGURATION MANAGER")
-    print("=" * 70)
-    print()
-    
-    # Test with development environment
-    test_config = ConfigManager('development')
-    
-    # Test 1: Basic get
-    print("TEST 1: Basic Configuration Get")
-    env = test_config.get('ENVIRONMENT')
-    print(f"  Environment: {env}")
-    assert env == 'development'
-    print("✅ Basic get working")
-    print()
-    
-    # Test 2: Boolean get
-    print("TEST 2: Boolean Configuration")
-    debug = test_config.get_bool('ENABLE_PROACTIVE_FEATURES', False)
-    print(f"  Proactive Features: {debug}")
-    print("✅ Boolean get working")
-    print()
-    
-    # Test 3: Integer get
-    print("TEST 3: Integer Configuration")
-    max_tokens = test_config.get_int('MAX_TOKENS', 500)
-    print(f"  Max Tokens: {max_tokens}")
-    assert max_tokens == 500
-    print("✅ Integer get working")
-    print()
-    
-    # Test 4: Environment checks
-    print("TEST 4: Environment Checks")
-    print(f"  Is Production: {test_config.is_production}")
-    print(f"  Is Development: {test_config.is_development}")
-    assert test_config.is_development == True
-    assert test_config.is_production == False
-    print("✅ Environment checks working")
-    print()
-    
-    # Test 5: Grouped configs
-    print("TEST 5: Grouped Configurations")
-    openai_config = test_config.get_openai_config()
-    print(f"  OpenAI Model: {openai_config.get('model')}")
-    print(f"  Max Tokens: {openai_config.get('max_tokens')}")
-    print("✅ Grouped configs working")
-    print()
-    
-    # Test 6: Rate limits
-    print("TEST 6: Rate Limits")
-    limits = test_config.get_rate_limits()
-    print(f"  Max Requests/Min: {limits['max_requests_per_minute']}")
-    print(f"  Max Conversations/Hour: {limits['max_conversations_per_hour']}")
-    print("✅ Rate limits loaded")
-    print()
-    
-    # Test 7: Validation
-    print("TEST 7: Configuration Validation")
-    validation = test_config.validate_config()
-    print(f"  Valid: {validation['valid']}")
-    print(f"  Errors: {len(validation['errors'])}")
-    print(f"  Warnings: {len(validation['warnings'])}")
-    if validation['warnings']:
-        for warning in validation['warnings']:
-            print(f"    ⚠️  {warning}")
-    print("✅ Validation working")
-    print()
-    
-    print("=" * 70)
-    print(f"Environment: {test_config.environment}")
-    print(f"Configuration Valid: {validation['valid']}")
-    print()
-    print("✅ All configuration manager tests complete!")
-
-
-if __name__ == "__main__":
-    test_config_manager()
+# LLM constants — single source of truth for model configuration
+LLM_MODEL = "gpt-4o-mini"
+LLM_TEMPERATURE_INTENT = 0.1
+LLM_TEMPERATURE_RESPONSE = 0.7
+LLM_MAX_TOKENS_INTENT = 300
+LLM_MAX_TOKENS_RESPONSE = 500

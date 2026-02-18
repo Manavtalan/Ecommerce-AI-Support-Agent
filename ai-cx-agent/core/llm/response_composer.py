@@ -386,7 +386,7 @@ class ResponseComposer:
         """Answer policy questions from RAG"""
         policy_info = tool_results.get('rag_results', [])
         
-        if policy_info:
+        if policy_info and policy_info[0]:
             # Use RAG results
             return (
                 "Here's our policy:\n\n"

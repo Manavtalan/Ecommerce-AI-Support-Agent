@@ -48,7 +48,7 @@ class BrandLoader:
         try:
             with open(config_path, 'r') as f:
                 config = yaml.safe_load(f)
-            return config
+            return config or {}
         except FileNotFoundError:
             print(f"⚠️  Warning: {config_path} not found")
             return {}
@@ -63,7 +63,7 @@ class BrandLoader:
         try:
             with open(voice_path, 'r') as f:
                 guidelines = yaml.safe_load(f)
-            return guidelines
+            return guidelines or {}
         except FileNotFoundError:
             print(f"⚠️  Warning: {voice_path} not found")
             return {}
@@ -211,7 +211,7 @@ class BrandLoader:
         if "items" in order:
             items = order["items"]
             facts["items_count"] = len(items)
-            facts["items"] = ", ".join([item["name"] for item in items])
+            facts["items"] = ", ".join([item.get("name", "Unknown") for item in items if item])
         
         return facts
     

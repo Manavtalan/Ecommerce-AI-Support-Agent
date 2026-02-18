@@ -34,8 +34,15 @@ BRAND_PHONE_MAP = {
     "919876543212": "organicbites"
 }
 
-# Verification token (set in environment)
-VERIFY_TOKEN = os.getenv("WHATSAPP_VERIFY_TOKEN", "your_verify_token_here")
+# Verification token (must be set via WHATSAPP_VERIFY_TOKEN environment variable)
+VERIFY_TOKEN = os.getenv("WHATSAPP_VERIFY_TOKEN")
+if not VERIFY_TOKEN:
+    import warnings
+    warnings.warn(
+        "WHATSAPP_VERIFY_TOKEN is not set. WhatsApp webhook verification will fail.",
+        RuntimeWarning,
+        stacklevel=1,
+    )
 
 
 def get_brand_from_phone(phone_number: str) -> str:

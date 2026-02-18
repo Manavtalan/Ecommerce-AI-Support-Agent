@@ -10,6 +10,7 @@ from typing import Dict, List, Optional, Any
 from dataclasses import dataclass, field
 from openai import OpenAI
 from dotenv import load_dotenv
+from core.config.manager import LLM_MODEL, LLM_TEMPERATURE_INTENT, LLM_MAX_TOKENS_INTENT
 
 load_dotenv()
 
@@ -176,17 +177,29 @@ CONVERSATION HISTORY FOR CONTEXT:
 {history}"""
 
         response = self.client.chat.completions.create(
-            model="gpt-4o-mini",
+            model=LLM_MODEL,
             messages=[
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": f"Customer message: {message}"}
             ],
-            temperature=0.1,  # Low temperature for consistent classification
-            max_tokens=300,
+            temperature=LLM_TEMPERATURE_INTENT,
+            max_tokens=LLM_MAX_TOKENS_INTENT,
             response_format={"type": "json_object"}
         )
 
-        return json.loads(response.choices[0].message.content)
+        try:
+            return json.loads(response.choices[0].message.content)
+        except (json.JSONDecodeError, KeyError, IndexError) as e:
+            print(f"   ⚠️  Intent classifier JSON parse error: {e}")
+            return {
+                "primary_intent": "unknown",
+                "specific_question": None,
+                "missing_data": [],
+                "user_emotion": "neutral",
+                "problem_type": None,
+                "needs_escalation": False,
+                "confidence": 0.3
+            }
 
     def _build_intent(self, result: Dict, message: str, active_order: Optional[str]) -> UserIntent:
         """Build UserIntent from LLM result with validation"""
@@ -209,11 +222,11 @@ CONVERSATION HISTORY FOR CONTEXT:
         # Clean missing_data — never include order_number if we have active order
         missing_data = result.get('missing_data', [])
         if active_order and 'order_number' in missing_data:
-            missing_data.remove('order_number')
+            missing_data = [x for x in missing_data if x != 'order_number']
 
         # Never require 'reason' for refunds
         if 'reason' in missing_data:
-            missing_data.remove('reason')
+            missing_data = [x for x in missing_data if x != 'reason']
 
         # Escalation: explicit request OR very angry
         needs_escalation = result.get('needs_escalation', False)

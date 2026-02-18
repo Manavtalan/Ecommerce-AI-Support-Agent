@@ -13,11 +13,11 @@ import re
 from core.conversation.context import ConversationContext
 from core.intelligence.intent_classifier import IntentClassifier, UserIntent
 from core.conversation.smart_escalation import SmartEscalationManager
-from core.emotion.detector import EmotionDetector
 
 # Tools & Data
 from core.tools.registry import ToolRegistry
 from core.brands.registry import get_brand_registry
+from core.config.manager import LLM_MODEL, LLM_TEMPERATURE_RESPONSE, LLM_MAX_TOKENS_RESPONSE
 
 from dotenv import load_dotenv
 load_dotenv()
@@ -155,7 +155,7 @@ class ConversationOrchestrator:
         # === STEP 2: HANDLE MISSING DATA ===
         if intent.missing_data:
             if 'order_number' in intent.missing_data and self.active_order_id:
-                intent.missing_data.remove('order_number')
+                intent.missing_data = [x for x in intent.missing_data if x != 'order_number']
                 print(f"   ✅ Order ID from context: {self.active_order_id}")
 
             if intent.missing_data:
@@ -265,7 +265,7 @@ class ConversationOrchestrator:
             self.active_order_id = order_id
             print(f"   ✅ Got order number from reply: {order_id}")
             if 'order_number' in intent.missing_data:
-                intent.missing_data.remove('order_number')
+                intent.missing_data = [x for x in intent.missing_data if x != 'order_number']
 
         data = self._gather_data(intent, message)
         analysis = self._analyze_situation(intent, data)
@@ -517,13 +517,13 @@ class ConversationOrchestrator:
 
         try:
             response = self.llm_client.chat.completions.create(
-                model="gpt-4o-mini",
+                model=LLM_MODEL,
                 messages=[
                     {"role": "system", "content": system_prompt},
                     {"role": "user", "content": user_prompt}
                 ],
-                temperature=0.7,
-                max_tokens=500
+                temperature=LLM_TEMPERATURE_RESPONSE,
+                max_tokens=LLM_MAX_TOKENS_RESPONSE
             )
             return response.choices[0].message.content.strip()
 
@@ -540,7 +540,7 @@ class ConversationOrchestrator:
 
         voice = {}
         voice_path = Path(__file__).parent.parent / \
-            "test_data" / "brands" / "fashionhub" / "voice_guidelines.yaml"
+            "test_data" / "brands" / self.brand_id / "voice_guidelines.yaml"
         try:
             with open(voice_path, 'r') as f:
                 voice = yaml.safe_load(f)
